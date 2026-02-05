@@ -1,7 +1,5 @@
+import { MYSTICAL_REPORTER } from "../config.js";
 import type { NewspaperEdition } from "../schemas/article.js";
-
-export const MYSTICAL_REPORTER = "Sven 'The Shadow' Spansen";
-export const REPORTER_TAGLINE = "— who somehow always knows, yet nobody has ever seen in the flesh";
 
 export const mockEdition: NewspaperEdition = {
 	editionNumber: 42,

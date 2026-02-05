@@ -1,4 +1,4 @@
-import { MYSTICAL_REPORTER, REPORTER_TAGLINE } from "../mocks/mock-articles.js";
+import { MYSTICAL_REPORTER, REPORTER_TAGLINE } from "../config.js";
 import { type Article, type NewspaperEdition, sectionLabels } from "../schemas/article.js";
 
 function renderByline(byline: string | undefined): string {

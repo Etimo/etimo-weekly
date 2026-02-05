@@ -1,4 +1,4 @@
-import { writeFileSync, mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { mockEdition } from "./mocks/mock-articles.js";
 import { NewspaperEditionSchema } from "./schemas/article.js";
 import { renderNewspaper } from "./templates/render.js";
