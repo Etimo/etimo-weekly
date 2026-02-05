@@ -21,6 +21,6 @@
 		"lineWidth": 100
 	},
 	"files": {
-		"ignore": ["node_modules", "dist", "data"]
+		"ignore": ["node_modules", "dist", "data", ".claude"]
 	}
 }
