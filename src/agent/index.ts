@@ -194,7 +194,9 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 					);
 					if (parentMsg) {
 						parentMsg.replies = output as Array<{ user: string; text: string }>;
-						console.log(`    🧵 Attached ${output.length} replies to message from ${parentMsg.user}`);
+						console.log(
+							`    🧵 Attached ${output.length} replies to message from ${parentMsg.user}`,
+						);
 					}
 				}
 			}

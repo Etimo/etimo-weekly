@@ -7,6 +7,7 @@
 		"dev": "tsx watch src/server.ts",
 		"build": "tsc",
 		"build:static": "tsx src/build-static.ts",
+		"build:pdf": "tsx src/build-pdf.ts",
 		"agent": "tsx src/agent/run.ts",
 		"start": "node dist/server.js",
 		"lint": "biome check .",
@@ -19,6 +20,7 @@
 		"ai": "^6.0.71",
 		"dotenv": "^17.2.3",
 		"express": "^4.21.0",
+		"puppeteer": "^24.37.0",
 		"zod": "^3.23.8"
 	},
 	"devDependencies": {
