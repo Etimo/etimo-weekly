@@ -1,10 +1,13 @@
 import { openai } from "@ai-sdk/openai";
+import { WebClient } from "@slack/web-api";
 import { Output, generateText, stepCountIs } from "ai";
 import { z } from "zod";
 import { MYSTICAL_REPORTER } from "../config.js";
 import type { NewspaperEdition } from "../schemas/article.js";
 import { slackTools } from "./tools.js";
 import { generateArticleAudio } from "./tts.js";
+
+const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
 
 const model = openai("gpt-4o");
 
@@ -52,6 +55,25 @@ type AgentState = {
 };
 
 const MIN_MESSAGES_REQUIRED = 3;
+
+// Extract all user IDs from text (format: <@U...>)
+function extractUserIds(text: string): string[] {
+	const mentionPattern = /<@([A-Z0-9]+)>/g;
+	const matches = text.matchAll(mentionPattern);
+	const ids = new Set<string>();
+	for (const match of matches) {
+		ids.add(match[1]);
+	}
+	return Array.from(ids);
+}
+
+// Replace user IDs with names in text
+function replaceUserIds(text: string, users: Map<string, string>): string {
+	return text.replace(/<@([A-Z0-9]+)>/g, (_, userId) => {
+		const name = users.get(userId);
+		return name ?? "a colleague";
+	});
+}
 
 type AgentOptions = {
 	outputDir?: string;
@@ -167,6 +189,51 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 		state.currentStep = "done";
 		return;
 	}
+
+	// Resolve all user IDs mentioned in messages
+	console.log("  👥 Resolving user IDs...");
+	const allUserIds = new Set<string>();
+	for (const msg of state.slackData.messages) {
+		// Add message author
+		if (msg.user) allUserIds.add(msg.user);
+		// Add mentioned users
+		if (msg.text) {
+			for (const id of extractUserIds(msg.text)) {
+				allUserIds.add(id);
+			}
+		}
+	}
+
+	// Resolve users we don't have yet
+	for (const userId of allUserIds) {
+		if (!state.slackData.users.has(userId)) {
+			try {
+				const result = await slack.users.info({ user: userId });
+				const name = result.user?.real_name ?? result.user?.name;
+				if (name) {
+					state.slackData.users.set(userId, name);
+					console.log(`    👤 Resolved ${userId} → ${name}`);
+				} else {
+					console.log(`    ⚠️ No name found for user ${userId}`);
+				}
+			} catch (error: unknown) {
+				const err = error as { data?: { error?: string } };
+				console.log(`    ⚠️ Could not resolve user ${userId}: ${err.data?.error ?? error}`);
+			}
+		}
+	}
+	console.log(`  ✅ Resolved ${state.slackData.users.size} users`);
+
+	// Replace user IDs with names in all messages
+	for (const msg of state.slackData.messages) {
+		if (msg.text) {
+			msg.text = replaceUserIds(msg.text, state.slackData.users);
+		}
+		if (msg.user && state.slackData.users.has(msg.user)) {
+			msg.user = state.slackData.users.get(msg.user) as string;
+		}
+	}
+
 	state.currentStep = "analyze";
 }
 
@@ -252,9 +319,11 @@ Be creative with section names based on the content. The gossip section is ALWAY
 
 // Schema for LLM output - all fields required (OpenAI strict mode requirement)
 const ArticleGenerationSchema = z.object({
-	headline: z.string().describe("Catchy newspaper-style headline"),
-	lead: z.string().describe("Opening paragraph that hooks the reader"),
-	body: z.string().describe("Main article content"),
+	headline: z.string().describe("Catchy newspaper-style headline (NO emojis, plain text only)"),
+	lead: z.string().describe("Opening paragraph that hooks the reader (plain text)"),
+	body: z
+		.string()
+		.describe("Main article content as HTML (use <p>, <strong>, <em> tags, NOT markdown)"),
 	tags: z.array(z.string()).describe("Relevant tags for the article"),
 });
 
@@ -275,10 +344,15 @@ Key source content: ${section.sourceMessages.join("\n")}
 Full Slack data for reference:
 ${JSON.stringify(state.slackData.messages, null, 2)}
 
+IMPORTANT FORMATTING RULES:
+- headline: Plain text only, NO emojis (the section label already has the emoji)
+- lead: Plain text paragraph
+- body: Use HTML tags (<p>, <strong>, <em>) for formatting, NOT markdown (no ** or *)
+
 Write in newspaper style. Be fun and engaging.
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
-Make sure to reference real messages and people from the data.`,
+Reference real people by name from the data. Use their actual names, not IDs.`,
 				output: Output.object({ schema: ArticleGenerationSchema }),
 			});
 

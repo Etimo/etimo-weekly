@@ -140,21 +140,18 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 			font-size: clamp(2rem, 5vw, 3.5rem);
 		}
 
-		.article--weeks_wins,
-		.article--slack_highlights {
+		/* Default: all non-headline articles span 6 columns (2-column layout) */
+		.article:not(.article--headline) {
 			grid-column: span 6;
 		}
 
-		.article--random_facts,
+		/* Gossip section spans full width at the bottom */
 		.article--gossip {
-			grid-column: span 6;
+			grid-column: span 12;
 		}
 
 		@media (max-width: 768px) {
-			.article--weeks_wins,
-			.article--slack_highlights,
-			.article--random_facts,
-			.article--gossip {
+			.article:not(.article--headline) {
 				grid-column: span 12;
 			}
 		}
