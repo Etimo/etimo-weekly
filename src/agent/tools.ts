@@ -23,7 +23,7 @@ export const slackTools = {
 						id: c.id,
 						name: c.name,
 						topic: c.topic?.value,
-						memberCount: c.num_members,
+						memberCount: (c as { num_members?: number }).num_members,
 					})) ?? []
 				);
 			} catch (error) {

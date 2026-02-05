@@ -7,6 +7,17 @@ function renderByline(byline: string | undefined): string {
 	return `<p class="article__byline">By ${byline}${isMystical ? ` <span class="byline-tagline">${REPORTER_TAGLINE}</span>` : ""}</p>`;
 }
 
+function renderAudioPlayer(audioFile: string | undefined): string {
+	if (!audioFile) return "";
+	return `
+		<button class="listen-btn" onclick="this.nextElementSibling.paused ? this.nextElementSibling.play() : this.nextElementSibling.pause(); this.classList.toggle('playing')">
+			<span class="listen-icon">🎧</span>
+			<span class="listen-text">Listen</span>
+		</button>
+		<audio src="${audioFile}" preload="none"></audio>
+	`;
+}
+
 function renderArticle(article: Article): string {
 	return `
 		<article class="article article--${article.section}">
@@ -14,6 +25,7 @@ function renderArticle(article: Article): string {
 				<span class="article__section">${sectionLabels[article.section]}</span>
 				<h2 class="article__headline">${article.headline}</h2>
 				${renderByline(article.byline)}
+				${renderAudioPlayer(article.audioFile)}
 			</header>
 			<p class="article__lead">${article.lead}</p>
 			<div class="article__body">${article.body}</div>
@@ -196,6 +208,42 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 		.tag {
 			color: var(--color-ink-light);
 			margin-right: 0.5rem;
+		}
+
+		.listen-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4rem;
+			padding: 0.4rem 0.8rem;
+			margin-top: 0.5rem;
+			font-family: 'Inter', sans-serif;
+			font-size: 0.75rem;
+			font-weight: 500;
+			color: var(--color-ink);
+			background: var(--color-bg);
+			border: 1px solid var(--color-border);
+			border-radius: 2rem;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.listen-btn:hover {
+			background: var(--color-ink);
+			color: var(--color-paper);
+		}
+
+		.listen-btn.playing {
+			background: var(--color-accent);
+			color: var(--color-paper);
+			border-color: var(--color-accent);
+		}
+
+		.listen-btn.playing .listen-text::after {
+			content: 'ing';
+		}
+
+		.listen-icon {
+			font-size: 1rem;
 		}
 
 		.footer {

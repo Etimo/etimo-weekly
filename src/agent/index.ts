@@ -8,6 +8,7 @@ import {
 	SectionType as SectionTypeEnum,
 } from "../schemas/article.js";
 import { slackTools } from "./tools.js";
+import { generateArticleAudio } from "./tts.js";
 
 const model = openai("gpt-4o");
 
@@ -37,20 +38,23 @@ type AgentState = {
 		body: string;
 		tags: string[];
 		publishedAt: string;
+		audioFile?: string;
 	}>;
-	currentStep: "gather" | "analyze" | "generate" | "review" | "done";
+	currentStep: "gather" | "analyze" | "generate" | "audio" | "review" | "done";
 	editorNote?: string;
+	outputDir: string;
 };
 
 const MIN_MESSAGES_REQUIRED = 3;
 
-export async function runAgent(): Promise<NewspaperEdition | null> {
+export async function runAgent(outputDir = "dist/generated"): Promise<NewspaperEdition | null> {
 	console.log("🔧 Initializing agent...");
 
 	const state: AgentState = {
 		slackData: { channels: [], messages: [], users: new Map() },
 		articles: [],
 		currentStep: "gather",
+		outputDir,
 	};
 
 	while (state.currentStep !== "done") {
@@ -64,6 +68,9 @@ export async function runAgent(): Promise<NewspaperEdition | null> {
 				break;
 			case "generate":
 				await generateArticlesStep(state);
+				break;
+			case "audio":
+				await generateAudioStep(state);
 				break;
 			case "review":
 				await reviewStep(state);
@@ -228,6 +235,27 @@ Make sure to reference real messages and people from the data (or make up plausi
 			}
 		} catch (error) {
 			console.error(`  ❌ Failed to generate ${section}:`, error);
+		}
+	}
+
+	state.currentStep = "audio";
+}
+
+async function generateAudioStep(state: AgentState): Promise<void> {
+	console.log("🎙️ Generating audio for articles...");
+
+	for (const article of state.articles) {
+		try {
+			const audioFile = await generateArticleAudio(
+				article.id,
+				article.headline,
+				article.lead,
+				article.body,
+				state.outputDir,
+			);
+			article.audioFile = audioFile;
+		} catch (error) {
+			console.error(`  ❌ Failed to generate audio for ${article.headline}:`, error);
 		}
 	}
 

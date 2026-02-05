@@ -19,6 +19,7 @@ export const ArticleSchema = z.object({
 	body: z.string().describe("Main article content"),
 	tags: z.array(z.string()).optional(),
 	publishedAt: z.string().datetime(),
+	audioFile: z.string().optional().describe("Filename of the audio version"),
 });
 
 export type Article = z.infer<typeof ArticleSchema>;
