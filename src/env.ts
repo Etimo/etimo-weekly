@@ -4,6 +4,7 @@ const envSchema = z.object({
 	// API Keys
 	OPENAI_API_KEY: z.string().min(1).optional(),
 	SLACK_BOT_TOKEN: z.string().min(1).optional(),
+	SLACK_SIGNING_SECRET: z.string().min(1).optional(),
 
 	// Service Configuration
 	SERVICES_SLACK: z.enum(["slack", "fake"]).default("slack"),

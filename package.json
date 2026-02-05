@@ -11,12 +11,16 @@
 		"agent": "tsx src/agent/run.ts",
 		"agent:fake": "SERVICES_SLACK=fake SERVICES_LLM=fake SERVICES_TTS=fake tsx src/agent/run.ts",
 		"start": "node dist/server.js",
+		"test": "vitest",
+		"test:run": "vitest run",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"deploy": "gh-pages -d dist/generated"
 	},
 	"dependencies": {
 		"@ai-sdk/openai": "^3.0.25",
+		"@fastify/swagger": "^9.6.1",
+		"@fastify/swagger-ui": "^5.2.5",
 		"@slack/web-api": "^7.13.0",
 		"ai": "^6.0.71",
 		"dotenv": "^17.2.3",
@@ -27,8 +31,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^1.9.0",
-		"@types/node": "^22.5.0",
+		"@types/node": "^22.19.8",
 		"tsx": "^4.19.0",
-		"typescript": "^5.5.0"
+		"typescript": "^5.5.0",
+		"vitest": "^4.0.18"
 	}
 }

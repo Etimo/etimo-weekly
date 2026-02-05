@@ -4,6 +4,7 @@ import { MYSTICAL_REPORTER } from "../config.js";
 import type { NewspaperEdition } from "../schemas/article.js";
 import type { ILLMService } from "../services/llm/ILLMService.js";
 import type { ISlackService } from "../services/slack/ISlackService.js";
+import type { IFileTipsService, Tip } from "../services/tips/IFileTipsService.js";
 import type { ITTSService } from "../services/tts/ITTSService.js";
 
 const SYSTEM_PROMPT = `You are ${MYSTICAL_REPORTER}, a mysterious newspaper reporter who somehow always knows everything happening at Etimo.
@@ -33,6 +34,7 @@ type AnalyzedSection = {
 
 type AgentState = {
 	slackData: SlackData;
+	anonymousTips: Tip[];
 	analyzedSections: AnalyzedSection[];
 	articles: Array<{
 		id: string;
@@ -75,6 +77,7 @@ export type AgentDependencies = {
 	slack: ISlackService;
 	llm: ILLMService;
 	tts: ITTSService;
+	tips: IFileTipsService;
 };
 
 export type AgentOptions = {
@@ -92,6 +95,7 @@ export async function runAgent(
 
 	const state: AgentState = {
 		slackData: { channels: [], messages: [], users: new Map() },
+		anonymousTips: [],
 		analyzedSections: [],
 		articles: [],
 		currentStep: "gather",
@@ -332,6 +336,12 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 		}
 	}
 
+	// Load anonymous tips submitted by users
+	state.anonymousTips = await deps.tips.consumeTips();
+	if (state.anonymousTips.length > 0) {
+		console.log(`  📬 Loaded ${state.anonymousTips.length} anonymous tips for the gossip column`);
+	}
+
 	state.currentStep = "analyze";
 }
 
@@ -371,6 +381,20 @@ const AnalysisSchema = z.object({
 async function analyzeStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("📰 Analyzing gathered data...");
 	console.log(`  📊 Analyzing ${state.slackData.messages.length} messages`);
+	if (state.anonymousTips.length > 0) {
+		console.log(`  📬 Including ${state.anonymousTips.length} anonymous tips for gossip`);
+	}
+
+	// Format anonymous tips for inclusion
+	const tipsSection =
+		state.anonymousTips.length > 0
+			? `
+
+ANONYMOUS TIPS (submitted by readers for the gossip column):
+${state.anonymousTips.map((t) => `- "${t.text}"`).join("\n")}
+
+These tips are ANONYMOUS - do not try to identify who sent them. Use them as inspiration for the gossip section!`
+			: "";
 
 	const { output: analysis } = await deps.llm.generateStructured({
 		schema: AnalysisSchema,
@@ -379,6 +403,7 @@ async function analyzeStep(state: AgentState, deps: AgentDependencies): Promise<
 
 Gathered data:
 ${JSON.stringify(state.slackData.messages, null, 2)}
+${tipsSection}
 
 Based on the ACTUAL content found, create appropriate sections. Don't use generic categories -
 create sections that reflect what's really in the messages. For example:
@@ -388,6 +413,7 @@ create sections that reflect what's really in the messages. For example:
 - If there are interesting discussions, create a "hot_topics" section with label "🔥 Heta Ämnen"
 
 Be creative with section names based on the content. The gossip section is ALWAYS required.
+${state.anonymousTips.length > 0 ? "IMPORTANT: Make sure to incorporate the anonymous tips into the gossip section!" : ""}
 Ensure all labels are in Swedish.`,
 	});
 
@@ -451,7 +477,12 @@ Keep the article short and concise (max 2-3 paragraphs).
 Mention who reacted to the messages if relevant (e.g. "Björn reagerade med 🔥").
 End with a short, punchy signoff (e.g. "/- Redaktionen" or "/- Sven").
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
-${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
+${
+	section.id === "gossip"
+		? `This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!
+${state.anonymousTips.length > 0 ? `\nANONYMOUS TIPS to incorporate:\n${state.anonymousTips.map((t) => `- "${t.text}"`).join("\n")}\nThese tips are ANONYMOUS - weave them into the gossip naturally without revealing sources!` : ""}`
+		: ""
+}
 Reference real people by name from the data. Use their actual names, not IDs.`,
 			});
 
