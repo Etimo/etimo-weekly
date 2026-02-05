@@ -11,7 +11,7 @@ export class RealTTSService implements ITTSService {
 	}
 
 	async generateAudio(text: string, outputPath: string, voice = "alloy"): Promise<void> {
-		console.log(`    🎙️ Generating audio...`);
+		console.log("    🎙️ Generating audio...");
 
 		const { audio } = await generateSpeech({
 			model: this.model,
