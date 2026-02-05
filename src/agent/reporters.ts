@@ -105,9 +105,7 @@ export function getReporterForSection(sectionId: string): Reporter {
 	switch (sectionId) {
 		case "headline":
 			return SVEN_SCOOP;
-		case "code_review":
-		case "architecture":
-		case "tech_debt":
+		case "case_review":
 			return HECTOR_SELECTOR;
 		case "tech_trends":
 		case "new_tools":

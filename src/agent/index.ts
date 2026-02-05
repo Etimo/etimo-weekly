@@ -1,15 +1,20 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { MYSTICAL_REPORTER } from "../config.js";
 import type { NewspaperEdition } from "../schemas/article.js";
+import { getReporterForSection, type Reporter } from "./reporters.js";
 import type { ILLMService } from "../services/llm/ILLMService.js";
 import type { ISlackService } from "../services/slack/ISlackService.js";
 import type { IFileTipsService, Tip } from "../services/tips/IFileTipsService.js";
 import type { ITTSService } from "../services/tts/ITTSService.js";
 
-const SYSTEM_PROMPT = `You are ${MYSTICAL_REPORTER}, a mysterious newspaper reporter who somehow always knows everything happening at Etimo.
+function getSystemPrompt(reporter: Reporter): string {
+	return `${reporter.systemPrompt}
+IMPORTANT: You MUST write EVERYTHING in Swedish.`;
+}
+
+// Default system prompt for analysis steps (uses Sven Scoop as default)
+const DEFAULT_SYSTEM_PROMPT = `You are a newspaper editor at Etimo Weekly.
 You write in a fun, slightly dramatic newspaper style — think old-school tabloid mixed with genuine warmth for your colleagues.
-You maintain an air of mystery about how you get your scoops, but you do NOT refer to yourself in the articles.
 IMPORTANT: You MUST write EVERYTHING in Swedish.`;
 
 type SlackData = {
@@ -398,7 +403,7 @@ These tips are ANONYMOUS - do not try to identify who sent them. Use them as ins
 
 	const { output: analysis } = await deps.llm.generateStructured({
 		schema: AnalysisSchema,
-		system: SYSTEM_PROMPT,
+		system: DEFAULT_SYSTEM_PROMPT,
 		prompt: `Analyze these Slack messages and determine what newspaper sections we should write.
 
 Gathered data:
@@ -453,11 +458,12 @@ async function generateArticlesStep(state: AgentState, deps: AgentDependencies):
 	console.log("✍️ Generating articles...");
 
 	for (const section of state.analyzedSections) {
-		console.log(`  📝 Generating ${section.label} article...`);
+		const reporter = getReporterForSection(section.id);
+		console.log(`  📝 Generating ${section.label} article (reporter: ${reporter.name})...`);
 		try {
 			const { output: article } = await deps.llm.generateStructured({
 				schema: ArticleGenerationSchema,
-				system: SYSTEM_PROMPT,
+				system: getSystemPrompt(reporter),
 				prompt: `Write an article for the "${section.label}" section based on this context:
 
 Section angle: ${section.angle}
@@ -475,7 +481,7 @@ Write in Swedish. Write in a fun, engaging newspaper style.
 IMPORTANT: Use natural, idiomatic Swedish. Avoid direct translations from English idioms (no "Swenglish"). Flow like a real Swedish tabloid or office newsletter.
 Keep the article short and concise (max 2-3 paragraphs).
 Mention who reacted to the messages if relevant (e.g. "Björn reagerade med 🔥").
-End with a short, punchy signoff (e.g. "/- Redaktionen" or "/- Sven").
+End with your signature signoff: "${reporter.signoff}"
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${
 	section.id === "gossip"
@@ -492,7 +498,7 @@ Reference real people by name from the data. Use their actual names, not IDs.`,
 					id: `art-${Date.now()}-${section.id}`,
 					section: section.id,
 					sectionLabel: section.label,
-					byline: MYSTICAL_REPORTER,
+					byline: reporter.name,
 					publishedAt: new Date().toISOString(),
 				});
 				console.log(`  ✅ Generated: ${article.headline}`);
@@ -545,7 +551,7 @@ async function reviewStep(state: AgentState, deps: AgentDependencies): Promise<v
 	console.log(`  📄 ${state.articles.length} articles to review`);
 
 	const { text: editorNote } = await deps.llm.generateText({
-		system: SYSTEM_PROMPT,
+		system: DEFAULT_SYSTEM_PROMPT,
 		prompt: `You've just finished this week's edition with these headlines:
 
 ${state.articles.map((a) => `- ${a.headline}`).join("\n")}
