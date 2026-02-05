@@ -12,7 +12,7 @@ const envSchema = z.object({
 	SERVICES_TTS: z.enum(["openai", "fake"]).default("openai"),
 
 	// Optional model overrides
-	OPENAI_MODEL: z.string().default("gpt-4o"),
+	OPENAI_MODEL: z.string().default("gpt-5.2"),
 	TTS_MODEL: z.string().default("tts-1"),
 
 	// Server

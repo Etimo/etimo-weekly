@@ -1,5 +1,11 @@
 import { MYSTICAL_REPORTER, REPORTER_TAGLINE } from "../config.js";
-import { type Article, type NewspaperEdition, getSectionLabel } from "../schemas/article.js";
+import type { CrosswordPuzzle } from "../crossword/index.js";
+import {
+	type Article,
+	type NewspaperEdition,
+	type PreviousCrosswordSolution,
+	getSectionLabel,
+} from "../schemas/article.js";
 
 function renderByline(byline: string | undefined): string {
 	if (!byline) return "";
@@ -44,6 +50,97 @@ function renderArticle(article: Article): string {
 	`;
 }
 
+function renderPreviousCrosswordSolution(solution: PreviousCrosswordSolution): string {
+	// Build a grid with the solution filled in
+	const cells: (string | null)[][] = Array(solution.gridHeight)
+		.fill(null)
+		.map(() => Array(solution.gridWidth).fill(null));
+
+	// Fill in the words
+	for (const word of solution.words) {
+		for (let i = 0; i < word.word.length; i++) {
+			const row = word.direction === "across" ? word.row : word.row + i;
+			const col = word.direction === "across" ? word.col + i : word.col;
+			cells[row][col] = word.word[i].toUpperCase();
+		}
+	}
+
+	// Build grid HTML with letters filled in
+	let gridHtml = '<div class="crossword-grid crossword-grid--solution">';
+	for (let row = 0; row < solution.gridHeight; row++) {
+		gridHtml += '<div class="crossword-row">';
+		for (let col = 0; col < solution.gridWidth; col++) {
+			const cell = cells[row][col];
+			if (cell === null) {
+				gridHtml += '<div class="crossword-cell crossword-cell--black"></div>';
+			} else {
+				gridHtml += `<div class="crossword-cell crossword-cell--filled"><span class="crossword-letter">${cell}</span></div>`;
+			}
+		}
+		gridHtml += "</div>";
+	}
+	gridHtml += "</div>";
+
+	return `
+		<div class="crossword-solution">
+			<h3 class="crossword-solution-title">Förra veckans korsord (Utgåva #${solution.editionNumber})</h3>
+			${gridHtml}
+		</div>
+	`;
+}
+
+function renderCrossword(puzzle: CrosswordPuzzle): string {
+	const { grid, acrossClues, downClues, title } = puzzle;
+
+	// Build grid HTML with numbers
+	const numberMap = new Map<string, number>();
+	for (const placement of grid.placements) {
+		const key = `${placement.row},${placement.col}`;
+		if (!numberMap.has(key)) {
+			numberMap.set(key, placement.number);
+		}
+	}
+
+	let gridHtml = '<div class="crossword-grid">';
+	for (let row = 0; row < grid.height; row++) {
+		gridHtml += '<div class="crossword-row">';
+		for (let col = 0; col < grid.width; col++) {
+			const cell = grid.cells[row][col];
+			const number = numberMap.get(`${row},${col}`);
+			if (cell === null) {
+				gridHtml += '<div class="crossword-cell crossword-cell--black"></div>';
+			} else {
+				gridHtml += `<div class="crossword-cell">${number ? `<span class="crossword-number">${number}</span>` : ""}</div>`;
+			}
+		}
+		gridHtml += "</div>";
+	}
+	gridHtml += "</div>";
+
+	// Build clues HTML
+	const acrossHtml = acrossClues.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`).join("");
+	const downHtml = downClues.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`).join("");
+
+	return `
+		<div class="crossword">
+			<h2 class="crossword-title">🧩 ${title}</h2>
+			<div class="crossword-content">
+				${gridHtml}
+				<div class="crossword-clues">
+					<div class="crossword-clues-section">
+						<h3>Vågrätt</h3>
+						<ol class="crossword-clue-list">${acrossHtml}</ol>
+					</div>
+					<div class="crossword-clues-section">
+						<h3>Lodrätt</h3>
+						<ol class="crossword-clue-list">${downHtml}</ol>
+					</div>
+				</div>
+			</div>
+		</div>
+	`;
+}
+
 export function renderNewspaper(edition: NewspaperEdition): string {
 	const date = new Date(edition.editionDate).toLocaleDateString("sv-SE", {
 		weekday: "long",
@@ -59,8 +156,9 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 	const frontPageTeasers = otherArticles.slice(0, 3);
 	const interiorArticles = otherArticles.slice(3);
 
-	// Calculate total pages: front page + interior pages (estimate ~2 articles per page)
-	const totalPages = 1 + Math.max(1, Math.ceil(interiorArticles.length / 2));
+	// Calculate total pages: front page + interior pages + crossword page (if present)
+	const hasCrossword = !!edition.crossword;
+	const totalPages = 1 + Math.max(1, Math.ceil(interiorArticles.length / 2)) + (hasCrossword ? 1 : 0);
 
 	return `<!DOCTYPE html>
 <html lang="sv">
@@ -381,6 +479,122 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 			border-top: 0.5pt solid var(--color-border);
 			padding-top: 0.05in;
 		}
+
+		/* ===================
+		   CROSSWORD
+		   =================== */
+
+		.crossword {
+			padding: 0.25in;
+		}
+
+		.crossword-title {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 28pt;
+			font-weight: 700;
+			text-align: center;
+			margin-bottom: 0.3in;
+		}
+
+		.crossword-content {
+			display: flex;
+			gap: 0.5in;
+			justify-content: center;
+			align-items: flex-start;
+		}
+
+		.crossword-grid {
+			display: flex;
+			flex-direction: column;
+			border: 2pt solid var(--color-border);
+		}
+
+		.crossword-row {
+			display: flex;
+		}
+
+		.crossword-cell {
+			width: 0.35in;
+			height: 0.35in;
+			border: 1pt solid var(--color-border);
+			position: relative;
+			background: white;
+		}
+
+		.crossword-cell--black {
+			background: var(--color-ink);
+		}
+
+		.crossword-number {
+			position: absolute;
+			top: 1px;
+			left: 2px;
+			font-family: 'Inter', sans-serif;
+			font-size: 7pt;
+			font-weight: 600;
+		}
+
+		.crossword-clues {
+			display: flex;
+			gap: 0.4in;
+			max-width: 4in;
+		}
+
+		.crossword-clues-section h3 {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 14pt;
+			font-weight: 700;
+			margin-bottom: 0.1in;
+			border-bottom: 1pt solid var(--color-border);
+			padding-bottom: 0.05in;
+		}
+
+		.crossword-clue-list {
+			list-style: none;
+			font-size: 10pt;
+			line-height: 1.4;
+		}
+
+		.crossword-clue-list li {
+			margin-bottom: 0.05in;
+		}
+
+		.crossword-clue-list strong {
+			font-weight: 600;
+		}
+
+		/* Previous crossword solution */
+		.crossword-solution {
+			margin-top: 0.4in;
+			padding-top: 0.2in;
+			border-top: 1pt solid var(--color-border);
+		}
+
+		.crossword-solution-title {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 14pt;
+			font-weight: 700;
+			margin-bottom: 0.15in;
+			text-align: center;
+		}
+
+		.crossword-grid--solution {
+			transform: scale(0.7);
+			transform-origin: center top;
+			margin: 0 auto;
+		}
+
+		.crossword-cell--filled {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.crossword-letter {
+			font-family: 'Inter', sans-serif;
+			font-size: 12pt;
+			font-weight: 600;
+		}
 	</style>
 </head>
 <body>
@@ -431,6 +645,28 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 		<footer class="page-footer">
 			<span>© ${new Date().getFullYear()} Etimo Veckoblad</span>
 			<span>Sida 2 av ${totalPages}</span>
+		</footer>
+	</div>
+	`
+			: ""
+	}
+
+	<!-- CROSSWORD PAGE -->
+	${
+		edition.crossword
+			? `
+	<div class="page interior-page">
+		<header class="page-header">
+			<span class="page-header__title">Etimo Veckoblad</span>
+			<span class="page-header__date">${date}</span>
+		</header>
+
+		${renderCrossword(edition.crossword)}
+		${edition.previousCrosswordSolution ? renderPreviousCrosswordSolution(edition.previousCrosswordSolution) : ""}
+
+		<footer class="page-footer">
+			<span>© ${new Date().getFullYear()} Etimo Veckoblad</span>
+			<span>Sida ${totalPages} av ${totalPages}</span>
 		</footer>
 	</div>
 	`

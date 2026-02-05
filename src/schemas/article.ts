@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { CrosswordPuzzle } from "../crossword/index.js";
 
 // Dynamic sections - generated based on content
 // Only "gossip" is a recurring staple
@@ -26,11 +27,30 @@ export const ArticleSchema = z.object({
 
 export type Article = z.infer<typeof ArticleSchema>;
 
+export type PreviousCrosswordSolution = {
+	editionNumber: number;
+	title: string;
+	words: Array<{
+		word: string;
+		row: number;
+		col: number;
+		direction: "across" | "down";
+		number: number;
+	}>;
+	gridWidth: number;
+	gridHeight: number;
+};
+
 export const NewspaperEditionSchema = z.object({
 	editionNumber: z.number(),
 	editionDate: z.string().datetime(),
 	editorNote: z.string().optional().describe("A fun editor's note for the edition"),
 	articles: z.array(ArticleSchema),
+	crossword: z.custom<CrosswordPuzzle>().optional().describe("Weekly crossword puzzle"),
+	previousCrosswordSolution: z
+		.custom<PreviousCrosswordSolution>()
+		.optional()
+		.describe("Last week's crossword solution"),
 });
 
 export type NewspaperEdition = z.infer<typeof NewspaperEditionSchema>;
