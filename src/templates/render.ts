@@ -4,7 +4,7 @@ import { type Article, type NewspaperEdition, getSectionLabel } from "../schemas
 function renderByline(byline: string | undefined): string {
 	if (!byline) return "";
 	const isMystical = byline === MYSTICAL_REPORTER;
-	return `<p class="article__byline">By ${byline}${isMystical ? ` <span class="byline-tagline">${REPORTER_TAGLINE}</span>` : ""}</p>`;
+	return `<p class="article__byline">Av ${byline}${isMystical ? ` <span class="byline-tagline">${REPORTER_TAGLINE}</span>` : ""}</p>`;
 }
 
 function renderAudioPlayer(audioFile: string | undefined): string {
@@ -12,7 +12,7 @@ function renderAudioPlayer(audioFile: string | undefined): string {
 	return `
 		<button class="listen-btn" onclick="this.nextElementSibling.paused ? this.nextElementSibling.play() : this.nextElementSibling.pause(); this.classList.toggle('playing')">
 			<span class="listen-icon">🎧</span>
-			<span class="listen-text">Listen</span>
+			<span class="listen-text">Lyssna</span>
 		</button>
 		<audio src="${audioFile}" preload="none"></audio>
 	`;
@@ -35,7 +35,7 @@ function renderArticle(article: Article): string {
 }
 
 export function renderNewspaper(edition: NewspaperEdition): string {
-	const date = new Date(edition.editionDate).toLocaleDateString("en-US", {
+	const date = new Date(edition.editionDate).toLocaleDateString("sv-SE", {
 		weekday: "long",
 		year: "numeric",
 		month: "long",
@@ -46,11 +46,11 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 	const otherArticles = edition.articles.filter((a) => a.section !== "headline");
 
 	return `<!DOCTYPE html>
-<html lang="en">
+<html lang="sv">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Etimo Weekly - Edition #${edition.editionNumber}</title>
+	<title>Etimo Veckoblad - Utgåva #${edition.editionNumber}</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -256,15 +256,15 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 <body>
 	<main class="newspaper">
 		<header class="masthead">
-			<h1 class="masthead__title">Etimo Weekly</h1>
+			<h1 class="masthead__title">Etimo Veckoblad</h1>
 			<div class="masthead__meta">
-				<span>Edition #${edition.editionNumber}</span>
+				<span>Utgåva #${edition.editionNumber}</span>
 				<span>${date}</span>
-				<span>Stockholm, Sweden</span>
+				<span>Stockholm, Sverige</span>
 			</div>
 		</header>
 
-		${edition.editorNote ? `<div class="editor-note">"${edition.editorNote}" — The Editor</div>` : ""}
+		${edition.editorNote ? `<div class="editor-note">"${edition.editorNote}" — Redaktören</div>` : ""}
 
 		<div class="content">
 			${headlineArticle ? renderArticle(headlineArticle) : ""}
@@ -272,7 +272,7 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 		</div>
 
 		<footer class="footer">
-			<p>© ${new Date().getFullYear()} Etimo Weekly — All the news that's fit to Slack</p>
+			<p>© ${new Date().getFullYear()} Etimo Veckoblad — Alla nyheter som passar på Slack</p>
 		</footer>
 	</main>
 </body>

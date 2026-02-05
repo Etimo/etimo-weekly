@@ -51,6 +51,8 @@ export const slackTools = {
 				console.log(`    [Slack] Got ${result.messages?.length ?? 0} messages from ${channelId}`);
 				return (
 					result.messages?.map((m) => ({
+						channelId,
+						ts: m.ts,
 						user: m.user,
 						text: m.text,
 						timestamp: m.ts,
@@ -113,6 +115,37 @@ export const slackTools = {
 			} catch (error: unknown) {
 				const err = error as { data?: { error?: string } };
 				console.error("    [Slack] Error searching:", err.data?.error ?? error);
+				return { error: err.data?.error ?? String(error) };
+			}
+		},
+	}),
+
+	getThreadReplies: tool({
+		description: "Get the full conversation thread for a message",
+		inputSchema: z.object({
+			channelId: z.string().describe("The channel ID"),
+			ts: z.string().describe("The timestamp of the parent message (acts as ID)"),
+		}),
+		execute: async ({ channelId, ts }) => {
+			try {
+				console.log(`    [Slack] Fetching thread for ${ts} in ${channelId}...`);
+				const result = await slack.conversations.replies({
+					channel: channelId,
+					ts,
+				});
+				// Filter out the parent message (first one) to avoid duplication
+				const replies = result.messages?.slice(1) ?? [];
+				console.log(`    [Slack] Got ${replies.length} replies`);
+				return (
+					replies.map((m) => ({
+						user: m.user,
+						text: m.text,
+						timestamp: m.ts,
+					})) ?? []
+				);
+			} catch (error: unknown) {
+				const err = error as { data?: { error?: string } };
+				console.error(`    [Slack] Error fetching thread ${ts}:`, err.data?.error ?? error);
 				return { error: err.data?.error ?? String(error) };
 			}
 		},

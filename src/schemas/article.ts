@@ -41,8 +41,8 @@ export function getSectionLabel(section: string, label?: string): string {
 
 	// Default labels for known sections
 	const defaults: Record<string, string> = {
-		headline: "📰 Breaking News",
-		gossip: "👀 Office Gossip",
+		headline: "📰 Senaste Nytt",
+		gossip: "👀 Kontorsskvaller",
 	};
 
 	return (

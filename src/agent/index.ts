@@ -13,15 +13,18 @@ const model = openai("gpt-4o");
 
 const SYSTEM_PROMPT = `You are ${MYSTICAL_REPORTER}, a mysterious newspaper reporter who somehow always knows everything happening at Etimo.
 You write in a fun, slightly dramatic newspaper style — think old-school tabloid mixed with genuine warmth for your colleagues.
-You refer to yourself in third person occasionally and maintain an air of mystery about how you get your scoops.`;
+You refer to yourself in third person occasionally and maintain an air of mystery about how you get your scoops.
+IMPORTANT: You MUST write EVERYTHING in Swedish.`;
 
 type SlackData = {
 	channels: Array<{ id: string; name: string }>;
 	messages: Array<{
-		channel: string;
 		user: string;
 		text: string;
+		ts?: string;
+		channel?: string;
 		reactions?: Array<{ emoji: string; count: number }>;
+		replies?: Array<{ user: string; text: string }>;
 	}>;
 	users: Map<string, string>;
 };
@@ -146,10 +149,12 @@ Steps:
 1. First, list all channels to see what's available
 2. Then get history from the most relevant channels (general, random, kudos, dev, etc.)
 3. Look for messages with high reactions, interesting discussions, wins, funny moments
+4. IMPORTANT: If you see a message with interesting replies (threadReplies > 0), use getThreadReplies to fetch the full conversation.
 
 Focus on the past 2 years. Be thorough but efficient.`,
 		prompt: `Gather interesting Slack messages from the past 2 years (since timestamp ${twoYearsAgo}).
 Start by listing channels, then fetch messages from the most interesting ones.
+If you see interesting discussions in threads, fetch the replies!
 Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 	});
 
@@ -176,6 +181,22 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 				const user = output as { id: string; name: string };
 				state.slackData.users.set(user.id, user.name);
 				console.log(`    👤 Got user: ${user.name}`);
+			}
+			if (result.toolName === "getThreadReplies" && Array.isArray(output)) {
+				// Find parent message and attach replies
+				const toolCall = step.toolCalls.find((tc) => tc.toolCallId === result.toolCallId);
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const args = (toolCall as any)?.args as { channelId: string; ts: string };
+
+				if (args) {
+					const parentMsg = state.slackData.messages.find(
+						(m) => m.channel === args.channelId && m.ts === args.ts,
+					);
+					if (parentMsg) {
+						parentMsg.replies = output as Array<{ user: string; text: string }>;
+						console.log(`    🧵 Attached ${output.length} replies to message from ${parentMsg.user}`);
+					}
+				}
 			}
 		}
 	}
@@ -284,12 +305,13 @@ ${JSON.stringify(state.slackData.messages, null, 2)}
 
 Based on the ACTUAL content found, create appropriate sections. Don't use generic categories -
 create sections that reflect what's really in the messages. For example:
-- If there are product launches, create a "product_launches" section with label "🚀 Product Launches"
-- If there are kudos/shoutouts, create a "kudos" section with label "🎉 Kudos Corner"
-- If someone joined/left, create a "team_news" section with label "👋 Team News"
-- If there are interesting discussions, create a "hot_topics" section with label "🔥 Hot Topics"
+- If there are product launches, create a "product_launches" section with label "🚀 Produktlanseringar"
+- If there are kudos/shoutouts, create a "kudos" section with label "🎉 Kudos-hörnan"
+- If someone joined/left, create a "team_news" section with label "👋 Team-nytt"
+- If there are interesting discussions, create a "hot_topics" section with label "🔥 Heta Ämnen"
 
-Be creative with section names based on the content. The gossip section is ALWAYS required.`,
+Be creative with section names based on the content. The gossip section is ALWAYS required.
+Ensure all labels are in Swedish.`,
 		output: Output.object({ schema: AnalysisSchema }),
 	});
 
@@ -298,14 +320,14 @@ Be creative with section names based on the content. The gossip section is ALWAY
 		state.analyzedSections = [
 			{
 				id: "headline",
-				label: "📰 Breaking News",
+				label: "📰 Senaste Nytt",
 				sourceMessages: analysis.headline.sourceMessages,
 				angle: analysis.headline.angle,
 			},
 			...analysis.sections,
 			{
 				id: "gossip",
-				label: "👀 Office Gossip",
+				label: "👀 Kontorsskvaller",
 				sourceMessages: analysis.gossip.sourceMessages,
 				angle: analysis.gossip.angle,
 			},
@@ -341,7 +363,7 @@ async function generateArticlesStep(state: AgentState): Promise<void> {
 Section angle: ${section.angle}
 Key source content: ${section.sourceMessages.join("\n")}
 
-Full Slack data for reference:
+Full Slack data for reference (including threads):
 ${JSON.stringify(state.slackData.messages, null, 2)}
 
 IMPORTANT FORMATTING RULES:
@@ -349,7 +371,7 @@ IMPORTANT FORMATTING RULES:
 - lead: Plain text paragraph
 - body: Use HTML tags (<p>, <strong>, <em>) for formatting, NOT markdown (no ** or *)
 
-Write in newspaper style. Be fun and engaging.
+Write in Swedish. Write in newspaper style. Be fun and engaging.
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
 Reference real people by name from the data. Use their actual names, not IDs.`,
@@ -407,7 +429,8 @@ async function reviewStep(state: AgentState): Promise<void> {
 
 ${state.articles.map((a) => `- ${a.headline}`).join("\n")}
 
-Write a brief, witty editor's note (1-2 sentences) to introduce this edition.`,
+Write a brief, witty editor's note (1-2 sentences) to introduce this edition.
+Write in Swedish.`,
 	});
 
 	state.editorNote = editorNote;
