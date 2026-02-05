@@ -9,6 +9,7 @@
 		"build:static": "tsx src/build-static.ts",
 		"build:pdf": "tsx src/build-pdf.ts",
 		"agent": "tsx src/agent/run.ts",
+		"agent:fake": "SERVICES_SLACK=fake SERVICES_LLM=fake SERVICES_TTS=fake tsx src/agent/run.ts",
 		"start": "node dist/server.js",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",

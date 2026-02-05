@@ -1,15 +1,10 @@
-import { openai } from "@ai-sdk/openai";
-import { WebClient } from "@slack/web-api";
-import { Output, generateText, stepCountIs } from "ai";
+import { tool } from "ai";
 import { z } from "zod";
 import { MYSTICAL_REPORTER } from "../config.js";
 import type { NewspaperEdition } from "../schemas/article.js";
-import { slackTools } from "./tools.js";
-import { generateArticleAudio } from "./tts.js";
-
-const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
-
-const model = openai("gpt-4o");
+import type { ILLMService } from "../services/llm/ILLMService.js";
+import type { ISlackService } from "../services/slack/ISlackService.js";
+import type { ITTSService } from "../services/tts/ITTSService.js";
 
 const SYSTEM_PROMPT = `You are ${MYSTICAL_REPORTER}, a mysterious newspaper reporter who somehow always knows everything happening at Etimo.
 You write in a fun, slightly dramatic newspaper style — think old-school tabloid mixed with genuine warmth for your colleagues.
@@ -23,7 +18,7 @@ type SlackData = {
 		text: string;
 		ts?: string;
 		channel?: string;
-		reactions?: Array<{ emoji: string; count: number; users?: string[] }>;
+		reactions?: Array<{ emoji?: string; count?: number; users?: string[] }>;
 		replies?: Array<{ user: string; text: string }>;
 	}>;
 	users: Map<string, string>;
@@ -59,7 +54,6 @@ type AgentState = {
 
 const MIN_MESSAGES_REQUIRED = 3;
 
-// Extract all user IDs from text (format: <@U...>)
 function extractUserIds(text: string): string[] {
 	const mentionPattern = /<@([A-Z0-9]+)>/g;
 	const matches = text.matchAll(mentionPattern);
@@ -70,7 +64,6 @@ function extractUserIds(text: string): string[] {
 	return Array.from(ids);
 }
 
-// Replace user IDs with names in text
 function replaceUserIds(text: string, users: Map<string, string>): string {
 	return text.replace(/<@([A-Z0-9]+)>/g, (_, userId) => {
 		const name = users.get(userId);
@@ -78,12 +71,21 @@ function replaceUserIds(text: string, users: Map<string, string>): string {
 	});
 }
 
-type AgentOptions = {
+export type AgentDependencies = {
+	slack: ISlackService;
+	llm: ILLMService;
+	tts: ITTSService;
+};
+
+export type AgentOptions = {
 	outputDir?: string;
 	includeAudio?: boolean;
 };
 
-export async function runAgent(options: AgentOptions = {}): Promise<NewspaperEdition | null> {
+export async function runAgent(
+	deps: AgentDependencies,
+	options: AgentOptions = {},
+): Promise<NewspaperEdition | null> {
 	const { outputDir = "dist/generated", includeAudio = false } = options;
 
 	console.log("🔧 Initializing agent...");
@@ -101,19 +103,19 @@ export async function runAgent(options: AgentOptions = {}): Promise<NewspaperEdi
 		console.log(`\n📍 Current step: ${state.currentStep}`);
 		switch (state.currentStep) {
 			case "gather":
-				await gatherStep(state);
+				await gatherStep(state, deps);
 				break;
 			case "analyze":
-				await analyzeStep(state);
+				await analyzeStep(state, deps);
 				break;
 			case "generate":
-				await generateArticlesStep(state);
+				await generateArticlesStep(state, deps);
 				break;
 			case "audio":
-				await generateAudioStep(state);
+				await generateAudioStep(state, deps);
 				break;
 			case "review":
-				await reviewStep(state);
+				await reviewStep(state, deps);
 				break;
 		}
 	}
@@ -130,7 +132,65 @@ export async function runAgent(options: AgentOptions = {}): Promise<NewspaperEdi
 	};
 }
 
-async function gatherStep(state: AgentState): Promise<void> {
+function createSlackTools(slack: ISlackService) {
+	return {
+		listChannels: tool({
+			description: "List public channels in the Slack workspace that the bot is a member of",
+			inputSchema: z.object({
+				limit: z.number().optional().default(100).describe("Max channels to return"),
+			}),
+			execute: async ({ limit }) => {
+				return slack.listChannels(limit);
+			},
+		}),
+
+		getChannelHistory: tool({
+			description: "Get recent messages from a Slack channel",
+			inputSchema: z.object({
+				channelId: z.string().describe("The channel ID (e.g., C01234567)"),
+				limit: z.number().optional().default(50).describe("Max messages to return"),
+				oldest: z.string().optional().describe("Only messages after this Unix timestamp"),
+			}),
+			execute: async ({ channelId, limit, oldest }) => {
+				return slack.getChannelHistory(channelId, limit, oldest);
+			},
+		}),
+
+		getUserInfo: tool({
+			description: "Get information about a Slack user by their ID",
+			inputSchema: z.object({
+				userId: z.string().describe("The user ID (e.g., U01234567)"),
+			}),
+			execute: async ({ userId }) => {
+				return slack.getUserInfo(userId);
+			},
+		}),
+
+		searchMessages: tool({
+			description: "Search for messages across the workspace",
+			inputSchema: z.object({
+				query: z.string().describe("Search query"),
+				count: z.number().optional().default(20).describe("Max results"),
+			}),
+			execute: async ({ query, count }) => {
+				return slack.searchMessages(query, count);
+			},
+		}),
+
+		getThreadReplies: tool({
+			description: "Get the full conversation thread for a message",
+			inputSchema: z.object({
+				channelId: z.string().describe("The channel ID"),
+				ts: z.string().describe("The timestamp of the parent message (acts as ID)"),
+			}),
+			execute: async ({ channelId, ts }) => {
+				return slack.getThreadReplies(channelId, ts);
+			},
+		}),
+	};
+}
+
+async function gatherStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("🔍 Gathering Slack data...");
 
 	const twoYearsAgo = Math.floor((Date.now() - 2 * 365 * 24 * 60 * 60 * 1000) / 1000).toString();
@@ -138,10 +198,11 @@ async function gatherStep(state: AgentState): Promise<void> {
 		`  ⏰ Looking for messages since: ${new Date(Number(twoYearsAgo) * 1000).toISOString()}`,
 	);
 
-	const { steps, text } = await generateText({
-		model,
+	const slackTools = createSlackTools(deps.slack);
+
+	const { text, steps } = await deps.llm.generateWithTools({
 		tools: slackTools,
-		stopWhen: stepCountIs(10),
+		maxSteps: 10,
 		system: `You are gathering data for the Etimo Weekly newspaper.
 Your job is to collect interesting messages from Slack channels.
 
@@ -183,10 +244,8 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 				console.log(`    👤 Got user: ${user.name}`);
 			}
 			if (result.toolName === "getThreadReplies" && Array.isArray(output)) {
-				// Find parent message and attach replies
-				const toolCall = step.toolCalls.find((tc) => tc.toolCallId === result.toolCallId);
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				const args = (toolCall as any)?.args as { channelId: string; ts: string };
+				const toolCall = step.toolCalls?.find((tc) => tc.toolCallId === result.toolCallId);
+				const args = toolCall?.args as { channelId: string; ts: string } | undefined;
 
 				if (args) {
 					const parentMsg = state.slackData.messages.find(
@@ -204,6 +263,18 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 	}
 
 	console.log(`  ✅ Total: ${state.slackData.messages.length} messages gathered`);
+
+	// If no messages from LLM tool calls, fetch directly (e.g., mock LLM)
+	if (state.slackData.messages.length === 0) {
+		console.log("  📦 Fetching data directly from Slack service...");
+		const channels = await deps.slack.listChannels();
+		state.slackData.channels = channels;
+		for (const channel of channels) {
+			const messages = await deps.slack.getChannelHistory(channel.id);
+			state.slackData.messages.push(...messages);
+		}
+	}
+
 	if (state.slackData.messages.length < MIN_MESSAGES_REQUIRED) {
 		console.log(
 			`\n❌ Not enough content to generate a newspaper (need at least ${MIN_MESSAGES_REQUIRED} messages, got ${state.slackData.messages.length})`,
@@ -217,15 +288,12 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 	console.log("  👥 Resolving user IDs...");
 	const allUserIds = new Set<string>();
 	for (const msg of state.slackData.messages) {
-		// Add message author
 		if (msg.user) allUserIds.add(msg.user);
-		// Add mentioned users
 		if (msg.text) {
 			for (const id of extractUserIds(msg.text)) {
 				allUserIds.add(id);
 			}
 		}
-		// Add reaction users
 		if (msg.reactions) {
 			for (const r of msg.reactions) {
 				if (r.users) {
@@ -238,18 +306,10 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 	// Resolve users we don't have yet
 	for (const userId of allUserIds) {
 		if (!state.slackData.users.has(userId)) {
-			try {
-				const result = await slack.users.info({ user: userId });
-				const name = result.user?.real_name ?? result.user?.name;
-				if (name) {
-					state.slackData.users.set(userId, name);
-					console.log(`    👤 Resolved ${userId} → ${name}`);
-				} else {
-					console.log(`    ⚠️ No name found for user ${userId}`);
-				}
-			} catch (error: unknown) {
-				const err = error as { data?: { error?: string } };
-				console.log(`    ⚠️ Could not resolve user ${userId}: ${err.data?.error ?? error}`);
+			const user = await deps.slack.getUserInfo(userId);
+			if (user) {
+				state.slackData.users.set(user.id, user.name);
+				console.log(`    👤 Resolved ${userId} → ${user.name}`);
 			}
 		}
 	}
@@ -308,12 +368,12 @@ const AnalysisSchema = z.object({
 		.describe("The recurring gossip section - always included"),
 });
 
-async function analyzeStep(state: AgentState): Promise<void> {
+async function analyzeStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("📰 Analyzing gathered data...");
 	console.log(`  📊 Analyzing ${state.slackData.messages.length} messages`);
 
-	const { output: analysis } = await generateText({
-		model,
+	const { output: analysis } = await deps.llm.generateStructured({
+		schema: AnalysisSchema,
 		system: SYSTEM_PROMPT,
 		prompt: `Analyze these Slack messages and determine what newspaper sections we should write.
 
@@ -329,11 +389,9 @@ create sections that reflect what's really in the messages. For example:
 
 Be creative with section names based on the content. The gossip section is ALWAYS required.
 Ensure all labels are in Swedish.`,
-		output: Output.object({ schema: AnalysisSchema }),
 	});
 
 	if (analysis) {
-		// Build the sections list: headline first, then dynamic sections, then gossip
 		state.analyzedSections = [
 			{
 				id: "headline",
@@ -356,7 +414,6 @@ Ensure all labels are in Swedish.`,
 	state.currentStep = "generate";
 }
 
-// Schema for LLM output - all fields required (OpenAI strict mode requirement)
 const ArticleGenerationSchema = z.object({
 	headline: z.string().describe("Catchy newspaper-style headline (NO emojis, plain text only)"),
 	lead: z.string().describe("Opening paragraph that hooks the reader (plain text)"),
@@ -366,14 +423,14 @@ const ArticleGenerationSchema = z.object({
 	tags: z.array(z.string()).describe("Relevant tags for the article"),
 });
 
-async function generateArticlesStep(state: AgentState): Promise<void> {
+async function generateArticlesStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("✍️ Generating articles...");
 
 	for (const section of state.analyzedSections) {
 		console.log(`  📝 Generating ${section.label} article...`);
 		try {
-			const { output: article } = await generateText({
-				model,
+			const { output: article } = await deps.llm.generateStructured({
+				schema: ArticleGenerationSchema,
 				system: SYSTEM_PROMPT,
 				prompt: `Write an article for the "${section.label}" section based on this context:
 
@@ -396,7 +453,6 @@ End with a short, punchy signoff (e.g. "/- Redaktionen" or "/- Sven").
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
 Reference real people by name from the data. Use their actual names, not IDs.`,
-				output: Output.object({ schema: ArticleGenerationSchema }),
 			});
 
 			if (article) {
@@ -418,19 +474,33 @@ Reference real people by name from the data. Use their actual names, not IDs.`,
 	state.currentStep = state.includeAudio ? "audio" : "review";
 }
 
-async function generateAudioStep(state: AgentState): Promise<void> {
+function sanitizeTextForSpeech(text: string): string {
+	let clean = text.replace(/<[^>]*>/g, "");
+	clean = clean
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "och")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"');
+	clean = clean.replace(/<@[A-Z0-9]+>/g, "en kollega");
+	return clean;
+}
+
+async function generateAudioStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("🎙️ Generating audio for articles...");
+
+	const { mkdirSync } = await import("node:fs");
+	mkdirSync(state.outputDir, { recursive: true });
 
 	for (const article of state.articles) {
 		try {
-			const audioFile = await generateArticleAudio(
-				article.id,
-				article.headline,
-				article.lead,
-				article.body,
-				state.outputDir,
-			);
-			article.audioFile = audioFile;
+			const rawText = `${article.headline}. ${article.lead} ${article.body}`;
+			const text = sanitizeTextForSpeech(rawText);
+			const filename = `${article.id}.mp3`;
+			const filepath = `${state.outputDir}/${filename}`;
+
+			await deps.tts.generateAudio(text, filepath);
+			article.audioFile = filename;
 		} catch (error) {
 			console.error(`  ❌ Failed to generate audio for ${article.headline}:`, error);
 		}
@@ -439,12 +509,11 @@ async function generateAudioStep(state: AgentState): Promise<void> {
 	state.currentStep = "review";
 }
 
-async function reviewStep(state: AgentState): Promise<void> {
+async function reviewStep(state: AgentState, deps: AgentDependencies): Promise<void> {
 	console.log("🔍 Reviewing edition...");
 	console.log(`  📄 ${state.articles.length} articles to review`);
 
-	const { text: editorNote } = await generateText({
-		model,
+	const { text: editorNote } = await deps.llm.generateText({
 		system: SYSTEM_PROMPT,
 		prompt: `You've just finished this week's edition with these headlines:
 
