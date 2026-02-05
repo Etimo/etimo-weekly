@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { env } from "../env.js";
 import type { IFileTipsService } from "../services/tips/IFileTipsService.js";
@@ -37,7 +38,8 @@ export function getTipsService(): IFileTipsService {
 	return tipsService;
 }
 
-export async function tipsRoutes(app: FastifyInstance): Promise<void> {
+export async function tipsRoutes(fastify: FastifyInstance): Promise<void> {
+	const app = fastify.withTypeProvider<ZodTypeProvider>();
 	const service = getTipsService();
 
 	// Test endpoint for local development (simulates a tip submission)
@@ -58,12 +60,7 @@ export async function tipsRoutes(app: FastifyInstance): Promise<void> {
 				return reply.status(404).send({ error: "Not found" });
 			}
 
-			const body = request.body as { text?: string };
-			if (!body.text) {
-				return reply.status(400).send({ error: "Missing 'text' field" });
-			}
-
-			const tip = await service.saveTip(body.text);
+			const tip = await service.saveTip(request.body.text);
 			return { ok: true, tip };
 		},
 	});

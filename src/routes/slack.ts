@@ -1,5 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { env } from "../env.js";
 import { getTipsService } from "./tips.js";
@@ -57,11 +58,11 @@ async function sendConfirmationDM(channel: string): Promise<void> {
 }
 
 const SlackEventSchema = z.object({
-	type: z.string(),
+	type: z.enum(["url_verification", "event_callback"]),
 	challenge: z.string().optional(),
 	event: z
 		.object({
-			type: z.string(),
+			type: z.enum(["message", "app_mention"]),
 			channel: z.string(),
 			user: z.string(),
 			text: z.string(),
@@ -77,7 +78,8 @@ const SlackResponseSchema = z.union([
 	z.object({ error: z.string() }),
 ]);
 
-export async function slackRoutes(app: FastifyInstance): Promise<void> {
+export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
+	const app = fastify.withTypeProvider<ZodTypeProvider>();
 	const service = getTipsService();
 
 	app.post("/slack/events", {
@@ -92,16 +94,15 @@ export async function slackRoutes(app: FastifyInstance): Promise<void> {
 			},
 		},
 		handler: async (request, reply) => {
-			const body = request.body as z.infer<typeof SlackEventSchema>;
-			const rawBody = (request as unknown as { rawBody: string }).rawBody;
+			const { body, rawBody } = request;
 
 			// Verify signature if we have a signing secret
 			if (env.SLACK_SIGNING_SECRET) {
 				const signature = request.headers["x-slack-signature"] as string;
 				const timestamp = request.headers["x-slack-request-timestamp"] as string;
 
-				if (!signature || !timestamp) {
-					console.log("  ⚠️ Missing Slack signature headers");
+				if (!signature || !timestamp || !rawBody) {
+					console.log("  ⚠️ Missing Slack signature headers or body");
 					return reply.status(401).send({ error: "Missing signature" });
 				}
 
@@ -112,7 +113,7 @@ export async function slackRoutes(app: FastifyInstance): Promise<void> {
 			}
 
 			// Handle URL verification challenge (Slack sends this when setting up)
-			if (body.type === "url_verification") {
+			if (body.type === "url_verification" && body.challenge) {
 				console.log("  🔗 Slack URL verification challenge received");
 				return { challenge: body.challenge };
 			}

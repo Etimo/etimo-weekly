@@ -1,10 +1,13 @@
 import type { FastifyInstance } from "fastify";
+import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { mockEdition } from "../mocks/mock-articles.js";
 import { NewspaperEditionSchema } from "../schemas/article.js";
 import { renderNewspaper } from "../templates/render.js";
 
-export async function newspaperRoutes(app: FastifyInstance): Promise<void> {
+export async function newspaperRoutes(fastify: FastifyInstance): Promise<void> {
+	const app = fastify.withTypeProvider<ZodTypeProvider>();
+
 	app.get("/", {
 		schema: {
 			tags: ["Newspaper"],

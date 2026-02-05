@@ -8,6 +8,13 @@ import { newspaperRoutes } from "./routes/newspaper.js";
 import { slackRoutes } from "./routes/slack.js";
 import { tipsRoutes } from "./routes/tips.js";
 
+// Extend Fastify request type to include rawBody for Slack signature verification
+declare module "fastify" {
+	interface FastifyRequest {
+		rawBody?: string;
+	}
+}
+
 const app = Fastify({
 	logger: env.NODE_ENV === "development",
 });
@@ -49,7 +56,7 @@ app.addContentTypeParser("application/json", { parseAs: "string" }, (_req, body,
 app.addHook("preHandler", (request, _reply, done) => {
 	// Store raw body for signature verification
 	if (request.headers["content-type"]?.includes("application/json")) {
-		(request as unknown as { rawBody: string }).rawBody = JSON.stringify(request.body);
+		request.rawBody = JSON.stringify(request.body);
 	}
 	done();
 });
