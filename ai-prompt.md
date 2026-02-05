@@ -2,19 +2,21 @@
 
 ## Project Overview
 
-Etimo Weekly is a fun internal project that transforms company Slack messages and events into a newspaper-style website. It's an agentic AI application that fetches real Slack data and outputs formatted HTML articles.
+Etimo Weekly is a fun internal project that transforms company Slack messages and events into a newspaper-style website. It's an agentic AI application that fetches real Slack data, generates articles, and creates audio narrations.
 
-**Core concept:** An AI agent connects to Slack, gathers interesting messages, and generates a weekly "newspaper" with different sections, all written by a fictional mysterious reporter named **Sven 'The Shadow' Spansen** — who somehow always knows everything, yet nobody has ever seen in the flesh.
+**Core concept:** An AI agent connects to Slack, gathers interesting messages, and generates a weekly "newspaper" with different sections, all written by a fictional mysterious reporter named **Sven 'The Shadow' Spansen** — who somehow always knows everything, yet nobody has ever seen in the flesh. Each article includes an audio version that can be played in the browser.
 
 ## Tech Stack
 
 - **Language:** TypeScript (ES modules)
 - **Runtime:** Node.js
-- **AI:** Vercel AI SDK v6 with OpenAI provider (gpt-4o)
+- **AI:** Vercel AI SDK v6 with OpenAI provider
+  - gpt-4o for text generation
+  - tts-1 for audio narration
 - **Slack:** @slack/web-api for fetching messages
 - **Validation:** Zod schemas for LLM structured output
 - **Linting:** Biome
-- **Output:** Pure HTML with inline CSS (newspaper styling)
+- **Output:** Pure HTML with inline CSS + MP3 audio files
 
 ## Project Structure
 
@@ -26,8 +28,9 @@ src/
   build-static.ts        # Generates static HTML file
 
   agent/
-    index.ts             # Main agentic loop (4 steps)
+    index.ts             # Main agentic loop (5 steps)
     tools.ts             # Slack tools for the agent
+    tts.ts               # Text-to-speech audio generation
     run.ts               # CLI entry point for running the agent
 
   schemas/
@@ -39,12 +42,12 @@ src/
     mock-raw-data.ts     # Sample Slack messages (legacy, not used by agent)
 
   templates/
-    render.ts            # Pure HTML rendering function
+    render.ts            # Pure HTML rendering function with audio player
 ```
 
 ## Agent Architecture
 
-### Agent Loop (4 steps)
+### Agent Loop (5 steps)
 
 1. **Gather** — Uses Slack tools to fetch messages from channels the bot is a member of. Looks for interesting content over the past 2 years.
 
@@ -52,9 +55,11 @@ src/
 
 3. **Generate** — For each section (headline, weeks_wins, slack_highlights, random_facts, gossip), calls the LLM with `generateText()` + `Output.object()` using Zod schemas.
 
-4. **Review** — Generates a witty editor's note based on all the headlines.
+4. **Audio** — Generates MP3 audio narration for each article using OpenAI TTS (tts-1 model, "onyx" voice).
 
-State machine: `gather → analyze → generate → review → done`
+5. **Review** — Generates a witty editor's note based on all the headlines.
+
+State machine: `gather → analyze → generate → audio → review → done`
 
 ### Slack Tools
 
@@ -66,6 +71,15 @@ The agent has access to these tools (defined in `src/agent/tools.ts`):
 | `getChannelHistory` | Get messages from a specific channel |
 | `getUserInfo` | Resolve user IDs to names |
 | `searchMessages` | Search messages across workspace |
+
+### Audio Generation
+
+Audio is generated using `src/agent/tts.ts`:
+- Uses OpenAI TTS via `experimental_generateSpeech`
+- Model: `tts-1` with "onyx" voice (deep, authoritative)
+- Input: headline + lead + body concatenated
+- Output: MP3 file saved to output directory
+- Each article has a "Listen" button in the HTML
 
 ### Early Exit
 
@@ -84,7 +98,7 @@ The agent exits early if:
   body: string               // Main article content
   tags: string[]             // Relevant tags
 }
-// id, byline, publishedAt are added after generation
+// id, byline, publishedAt, audioFile are added after generation
 ```
 
 ### NewspaperEdition (final output)
@@ -93,7 +107,7 @@ The agent exits early if:
   editionNumber: number
   editionDate: string        // ISO datetime
   editorNote?: string        // Witty intro from "The Editor"
-  articles: Article[]
+  articles: Article[]        // Each article may have audioFile
 }
 ```
 
@@ -120,7 +134,7 @@ The agent exits early if:
 ## Environment Variables
 
 ```
-OPENAI_API_KEY=sk-...        # Required for LLM calls
+OPENAI_API_KEY=sk-...        # Required for LLM + TTS calls
 SLACK_BOT_TOKEN=xoxb-...     # Required for Slack API
 ```
 
@@ -147,6 +161,8 @@ The fictional reporter Sven 'The Shadow' Spansen writes in:
 - Multi-step tool calling uses `stopWhen: stepCountIs(n)` instead of `maxSteps`
 - Tool results are accessed via `steps[].toolResults[].output` (not `.result`)
 - Tool definitions use `inputSchema` (not `parameters`)
+- TTS uses `experimental_generateSpeech` (not `generateSpeech`)
+- Audio output has `uint8Array` property (not `arrayBuffer()`)
 
 ## Key Files to Modify
 
@@ -155,9 +171,16 @@ The fictional reporter Sven 'The Shadow' Spansen writes in:
 | Change article structure | `src/schemas/article.ts` |
 | Modify agent behavior | `src/agent/index.ts` |
 | Add/modify Slack tools | `src/agent/tools.ts` |
+| Change audio generation | `src/agent/tts.ts` |
 | Change HTML/CSS output | `src/templates/render.ts` |
 | Add new sections | `src/schemas/article.ts` (SectionType), `src/templates/render.ts` (CSS) |
 | Change reporter persona | `src/config.ts`, `src/agent/index.ts` (SYSTEM_PROMPT) |
+
+## Output Files
+
+When running `npm run agent`, the following files are generated in `dist/generated/`:
+- `index.html` — The newspaper webpage
+- `art-{timestamp}-{section}.mp3` — Audio file for each article
 
 ## Future Enhancements
 
@@ -169,3 +192,4 @@ Potential areas for expansion:
 - Scheduled runs (cron)
 - More section types (interviews, polls, weather-style "mood of the office")
 - Web UI for browsing past editions
+- Different TTS voices per section
