@@ -56,7 +56,7 @@ export const slackTools = {
 						user: m.user,
 						text: m.text,
 						timestamp: m.ts,
-						reactions: m.reactions?.map((r) => ({ emoji: r.name, count: r.count })),
+						reactions: m.reactions?.map((r) => ({ emoji: r.name, count: r.count, users: r.users })),
 						threadReplies: m.reply_count,
 					})) ?? []
 				);

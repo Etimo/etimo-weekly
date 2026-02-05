@@ -13,7 +13,7 @@ const model = openai("gpt-4o");
 
 const SYSTEM_PROMPT = `You are ${MYSTICAL_REPORTER}, a mysterious newspaper reporter who somehow always knows everything happening at Etimo.
 You write in a fun, slightly dramatic newspaper style — think old-school tabloid mixed with genuine warmth for your colleagues.
-You refer to yourself in third person occasionally and maintain an air of mystery about how you get your scoops.
+You maintain an air of mystery about how you get your scoops, but you do NOT refer to yourself in the articles.
 IMPORTANT: You MUST write EVERYTHING in Swedish.`;
 
 type SlackData = {
@@ -23,7 +23,7 @@ type SlackData = {
 		text: string;
 		ts?: string;
 		channel?: string;
-		reactions?: Array<{ emoji: string; count: number }>;
+		reactions?: Array<{ emoji: string; count: number; users?: string[] }>;
 		replies?: Array<{ user: string; text: string }>;
 	}>;
 	users: Map<string, string>;
@@ -223,6 +223,14 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 				allUserIds.add(id);
 			}
 		}
+		// Add reaction users
+		if (msg.reactions) {
+			for (const r of msg.reactions) {
+				if (r.users) {
+					for (const u of r.users) allUserIds.add(u);
+				}
+			}
+		}
 	}
 
 	// Resolve users we don't have yet
@@ -252,6 +260,13 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 		}
 		if (msg.user && state.slackData.users.has(msg.user)) {
 			msg.user = state.slackData.users.get(msg.user) as string;
+		}
+		if (msg.reactions) {
+			for (const r of msg.reactions) {
+				if (r.users) {
+					r.users = r.users.map((u) => state.slackData.users.get(u) ?? u);
+				}
+			}
 		}
 	}
 
@@ -371,7 +386,11 @@ IMPORTANT FORMATTING RULES:
 - lead: Plain text paragraph
 - body: Use HTML tags (<p>, <strong>, <em>) for formatting, NOT markdown (no ** or *)
 
-Write in Swedish. Write in newspaper style. Be fun and engaging.
+Write in Swedish. Write in a fun, engaging newspaper style.
+IMPORTANT: Use natural, idiomatic Swedish. Avoid direct translations from English idioms (no "Swenglish"). Flow like a real Swedish tabloid or office newsletter.
+Keep the article short and concise (max 2-3 paragraphs).
+Mention who reacted to the messages if relevant (e.g. "Björn reagerade med 🔥").
+End with a short, punchy signoff (e.g. "/- Redaktionen" or "/- Sven").
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
 Reference real people by name from the data. Use their actual names, not IDs.`,

@@ -4,6 +4,8 @@ A newspaper-style website for Etimo company happenings. Aggregates Slack message
 
 All articles are authored by the mysterious **Sven 'The Shadow' Spansen** — who somehow always knows, yet nobody has ever seen in the flesh.
 
+**Now fully localized in Swedish! 🇸🇪**
+
 ## Quick Start
 
 ```bash
@@ -13,59 +15,46 @@ npm run dev
 
 Open http://localhost:3000
 
-## Scripts
+## Running the AI Agent
 
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start dev server with hot reload |
-| `npm run build:static` | Generate static HTML to `dist/static/index.html` |
-| `npm run lint` | Run Biome linter |
-| `npm run lint:fix` | Run Biome with auto-fix |
+To generate a new edition from real Slack data:
+
+```bash
+# Generate newspaper
+npm run agent
+
+# Generate newspaper with audio narration (requires extra flags)
+npm run agent -- --include-audio
+```
+
+## Features
+
+- **Swedish Localization**: All articles and UI text are generated in natural, idiomatic Swedish.
+- **Thread Support**: The agent reads full threaded conversations to get the full context of discussions.
+- **Dynamic Sections**: Sections are created dynamically based on content (e.g., "🚀 Produktlanseringar", "🔥 Heta Ämnen").
+- **Audio Output**: Can generate MP3 narrations for every article (using OpenAI TTS).
 
 ## Project Structure
 
 ```
 src/
+  agent/
+    index.ts          # Main agent loop (Gather -> Analyze -> Generate -> Review)
+    tools.ts          # Slack tools (listCannels, history, threads)
   schemas/
     article.ts        # Zod schemas for Article, NewspaperEdition
-    raw-data.ts       # Schema for raw Slack input
   mocks/
     mock-articles.ts  # Mock newspaper edition
-    mock-raw-data.ts  # Sample Slack messages
   templates/
     render.ts         # Pure HTML rendering
   server.ts           # Express dev server
-  build-static.ts     # Static site generator
-```
-
-## How It Works
-
-1. **Raw data** (Slack messages, events) is validated against `RawDataInputSchema`
-2. **AI agent** (future) processes raw data into articles using Vercel AI SDK + Zod schemas
-3. **Articles** are validated against `ArticleSchema` with sections: headline, weeks_wins, slack_highlights, random_facts, gossip
-4. **Renderer** outputs pure HTML with newspaper-style CSS
-
-## Schemas
-
-Articles follow this structure (enforced by Zod):
-
-```typescript
-{
-  id: string
-  section: "headline" | "weeks_wins" | "slack_highlights" | "random_facts" | "gossip"
-  headline: string
-  byline?: string
-  lead: string      // Opening hook
-  body: string      // Main content
-  tags?: string[]
-  publishedAt: string // ISO datetime
-}
 ```
 
 ## Tech Stack
 
 - TypeScript
 - Node.js + Express
+- Vercel AI SDK (OpenAI Provider)
+- Slack Web API
 - Zod (schema validation)
-- Vercel AI SDK (for future LLM integration)
 - Biome (linting/formatting)

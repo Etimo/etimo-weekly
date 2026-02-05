@@ -5,8 +5,18 @@ import { experimental_generateSpeech as generateSpeech } from "ai";
 const model = openai.speech("tts-1");
 
 function sanitizeTextForSpeech(text: string): string {
-	// Replace Slack user mentions like <@U0AD3F01V7G> with "a user"
-	return text.replace(/<@[A-Z0-9]+>/g, "a user");
+	// Strip HTML tags
+	let clean = text.replace(/<[^>]*>/g, "");
+	// Replace HTML entities
+	clean = clean
+		.replace(/&nbsp;/g, " ")
+		.replace(/&amp;/g, "och")
+		.replace(/&lt;/g, "<")
+		.replace(/&gt;/g, ">")
+		.replace(/&quot;/g, '"');
+	// Replace Slack user mentions like <@U0AD3F01V7G> with "en kollega" (Swedish)
+	clean = clean.replace(/<@[A-Z0-9]+>/g, "en kollega");
+	return clean;
 }
 
 export async function generateArticleAudio(
@@ -23,7 +33,7 @@ export async function generateArticleAudio(
 
 	const { audio } = await generateSpeech({
 		model,
-		voice: "nova", // Warm, friendly, uplifting voice
+		voice: "alloy", // Neutral voice, often better for non-English
 		text,
 	});
 
