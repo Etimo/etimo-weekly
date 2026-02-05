@@ -2,16 +2,17 @@
 
 ## Project Overview
 
-Etimo Weekly is a fun internal project that transforms company Slack messages and events into a newspaper-style website. It's an agentic AI application that processes raw company data and outputs formatted HTML articles.
+Etimo Weekly is a fun internal project that transforms company Slack messages and events into a newspaper-style website. It's an agentic AI application that fetches real Slack data and outputs formatted HTML articles.
 
-**Core concept:** An AI agent reads Slack messages and generates a weekly "newspaper" with different sections, all written by a fictional mysterious reporter named **Sven 'The Shadow' Spansen** — who somehow always knows everything, yet nobody has ever seen in the flesh.
+**Core concept:** An AI agent connects to Slack, gathers interesting messages, and generates a weekly "newspaper" with different sections, all written by a fictional mysterious reporter named **Sven 'The Shadow' Spansen** — who somehow always knows everything, yet nobody has ever seen in the flesh.
 
 ## Tech Stack
 
 - **Language:** TypeScript (ES modules)
 - **Runtime:** Node.js
-- **AI:** Vercel AI SDK with OpenAI provider (gpt-4o)
-- **Validation:** Zod schemas for both input data and LLM output
+- **AI:** Vercel AI SDK v6 with OpenAI provider (gpt-4o)
+- **Slack:** @slack/web-api for fetching messages
+- **Validation:** Zod schemas for LLM structured output
 - **Linting:** Biome
 - **Output:** Pure HTML with inline CSS (newspaper styling)
 
@@ -25,38 +26,68 @@ src/
   build-static.ts        # Generates static HTML file
 
   agent/
-    index.ts             # Main agentic loop
+    index.ts             # Main agentic loop (4 steps)
+    tools.ts             # Slack tools for the agent
     run.ts               # CLI entry point for running the agent
 
   schemas/
     article.ts           # Zod schemas: Article, NewspaperEdition, SectionType
-    raw-data.ts          # Zod schemas: SlackMessage, RawDataInput
+    raw-data.ts          # Zod schemas: SlackMessage, RawDataInput (for reference)
 
   mocks/
     mock-articles.ts     # Sample newspaper edition (for testing render)
-    mock-raw-data.ts     # Sample Slack messages (for testing agent)
+    mock-raw-data.ts     # Sample Slack messages (legacy, not used by agent)
 
   templates/
     render.ts            # Pure HTML rendering function
 ```
 
+## Agent Architecture
+
+### Agent Loop (4 steps)
+
+1. **Gather** — Uses Slack tools to fetch messages from channels the bot is a member of. Looks for interesting content over the past 2 years.
+
+2. **Analyze** — LLM examines gathered messages, identifies the most newsworthy item for the headline, categorizes other messages into sections.
+
+3. **Generate** — For each section (headline, weeks_wins, slack_highlights, random_facts, gossip), calls the LLM with `generateText()` + `Output.object()` using Zod schemas.
+
+4. **Review** — Generates a witty editor's note based on all the headlines.
+
+State machine: `gather → analyze → generate → review → done`
+
+### Slack Tools
+
+The agent has access to these tools (defined in `src/agent/tools.ts`):
+
+| Tool | Description |
+|------|-------------|
+| `listChannels` | List channels the bot is a member of |
+| `getChannelHistory` | Get messages from a specific channel |
+| `getUserInfo` | Resolve user IDs to names |
+| `searchMessages` | Search messages across workspace |
+
+### Early Exit
+
+The agent exits early if:
+- Fewer than 3 messages are gathered
+- Bot isn't invited to any channels
+
 ## Key Schemas
 
-### Article (output)
+### Article (LLM output)
 ```typescript
 {
-  id: string
   section: "headline" | "weeks_wins" | "slack_highlights" | "random_facts" | "gossip"
   headline: string           // Catchy newspaper-style headline
-  byline?: string            // Always "Sven 'The Shadow' Spansen"
   lead: string               // Opening hook paragraph
   body: string               // Main article content
-  tags?: string[]
-  publishedAt: string        // ISO datetime
+  tags: string[]             // Relevant tags
 }
+// id, byline, publishedAt are added after generation
 ```
 
-### NewspaperEdition (output)
+### NewspaperEdition (final output)
 ```typescript
 {
   editionNumber: number
@@ -65,32 +96,6 @@ src/
   articles: Article[]
 }
 ```
-
-### RawDataInput (input)
-```typescript
-{
-  period: { start: string, end: string }
-  slackMessages: Array<{
-    channel: string
-    author: string
-    content: string
-    reactions?: Array<{ emoji: string, count: number }>
-    timestamp: string
-  }>
-}
-```
-
-## Agent Loop
-
-The agent runs in 3 steps:
-
-1. **Analyze** — Examines raw Slack data, identifies the most newsworthy item for the headline, categorizes other messages into sections, determines angles/hooks for each article.
-
-2. **Generate** — For each section (headline, weeks_wins, slack_highlights, random_facts, gossip), calls the LLM with `generateObject()` using the Article Zod schema to ensure structured output.
-
-3. **Review** — Generates a witty editor's note based on all the headlines.
-
-State machine: `analyze → generate → review → done`
 
 ## Newspaper Sections
 
@@ -115,8 +120,17 @@ State machine: `analyze → generate → review → done`
 ## Environment Variables
 
 ```
-OPENAI_API_KEY=sk-...   # Required for agent
+OPENAI_API_KEY=sk-...        # Required for LLM calls
+SLACK_BOT_TOKEN=xoxb-...     # Required for Slack API
 ```
+
+## Slack Setup
+
+1. Create a Slack App at api.slack.com/apps
+2. Add Bot Token Scopes: `channels:history`, `channels:read`, `users:read`, `reactions:read`
+3. Install to workspace
+4. Copy Bot User OAuth Token to `.env`
+5. **Important:** Invite the bot to channels with `/invite @YourAppName`
 
 ## Writing Style
 
@@ -127,23 +141,31 @@ The fictional reporter Sven 'The Shadow' Spansen writes in:
 - Maintains an air of mystery about how he gets his scoops
 - Uses newspaper conventions: "sources say", "reportedly", "when reached for comment"
 
-## Future Enhancements
+## Vercel AI SDK v6 Notes
 
-Potential areas for expansion:
-- Slack API integration for real data ingestion
-- Multiple LLM provider support
-- Image generation for article illustrations
-- Email distribution
-- Archive of past editions
-- More section types (interviews, polls, weather-style "mood of the office")
+- `generateObject()` is deprecated — use `generateText()` with `Output.object({ schema })` instead
+- Multi-step tool calling uses `stopWhen: stepCountIs(n)` instead of `maxSteps`
+- Tool results are accessed via `steps[].toolResults[].output` (not `.result`)
+- Tool definitions use `inputSchema` (not `parameters`)
 
 ## Key Files to Modify
 
 | Task | Files |
 |------|-------|
 | Change article structure | `src/schemas/article.ts` |
-| Change raw data format | `src/schemas/raw-data.ts` |
 | Modify agent behavior | `src/agent/index.ts` |
+| Add/modify Slack tools | `src/agent/tools.ts` |
 | Change HTML/CSS output | `src/templates/render.ts` |
 | Add new sections | `src/schemas/article.ts` (SectionType), `src/templates/render.ts` (CSS) |
 | Change reporter persona | `src/config.ts`, `src/agent/index.ts` (SYSTEM_PROMPT) |
+
+## Future Enhancements
+
+Potential areas for expansion:
+- Multiple LLM provider support (Anthropic, etc.)
+- Image generation for article illustrations
+- Email distribution
+- Archive of past editions
+- Scheduled runs (cron)
+- More section types (interviews, polls, weather-style "mood of the office")
+- Web UI for browsing past editions
