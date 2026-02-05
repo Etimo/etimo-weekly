@@ -1,12 +1,17 @@
+import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { mockRawData } from "../mocks/mock-raw-data.js";
 import { renderNewspaper } from "../templates/render.js";
 import { runAgent } from "./index.js";
 
 async function main() {
 	console.log("🚀 Starting Etimo Weekly agent...\n");
 
-	const edition = await runAgent(mockRawData);
+	const edition = await runAgent();
+
+	if (!edition) {
+		console.log("\n🛑 No edition generated. Exiting.");
+		process.exit(1);
+	}
 
 	console.log("\n📰 Generated edition:", edition.editionNumber);
 	console.log("📝 Editor's note:", edition.editorNote);

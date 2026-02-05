@@ -14,7 +14,9 @@
 	},
 	"dependencies": {
 		"@ai-sdk/openai": "^3.0.25",
+		"@slack/web-api": "^7.13.0",
 		"ai": "^6.0.71",
+		"dotenv": "^17.2.3",
 		"express": "^4.21.0",
 		"zod": "^3.23.8"
 	},
