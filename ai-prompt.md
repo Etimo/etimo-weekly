@@ -51,11 +51,11 @@ src/
 
 1. **Gather** — Uses Slack tools to fetch messages from channels the bot is a member of. Looks for interesting content over the past 2 years.
 
-2. **Analyze** — LLM examines gathered messages, identifies the most newsworthy item for the headline, categorizes other messages into sections.
+2. **Analyze** — LLM examines gathered messages and dynamically determines what sections to create based on content. Always includes headline and gossip; other sections are content-driven (e.g., kudos, product_launches, team_news).
 
-3. **Generate** — For each section (headline, weeks_wins, slack_highlights, random_facts, gossip), calls the LLM with `generateText()` + `Output.object()` using Zod schemas.
+3. **Generate** — For each analyzed section, calls the LLM with `generateText()` + `Output.object()` using Zod schemas. Section labels are generated with emojis (e.g., "🚀 Product Launches").
 
-4. **Audio** — Generates MP3 audio narration for each article using OpenAI TTS (tts-1 model, "onyx" voice).
+4. **Audio** — Generates MP3 audio narration for each article using OpenAI TTS (tts-1 model, "nova" voice).
 
 5. **Review** — Generates a witty editor's note based on all the headlines.
 
@@ -92,7 +92,8 @@ The agent exits early if:
 ### Article (LLM output)
 ```typescript
 {
-  section: "headline" | "weeks_wins" | "slack_highlights" | "random_facts" | "gossip"
+  section: string            // Dynamic section identifier (e.g., 'headline', 'kudos', 'product_launches')
+  sectionLabel?: string      // Display label with emoji (e.g., '🚀 Product Launches')
   headline: string           // Catchy newspaper-style headline
   lead: string               // Opening hook paragraph
   body: string               // Main article content
@@ -113,20 +114,34 @@ The agent exits early if:
 
 ## Newspaper Sections
 
+Sections are **dynamically generated** based on the content found in Slack. The agent analyzes gathered messages and creates appropriate sections that fit the actual content. Only two sections are guaranteed:
+
 | Section | Label | Purpose |
 |---------|-------|---------|
-| `headline` | Breaking News | The biggest story of the week |
-| `weeks_wins` | This Week's Wins | Achievements, shipped features, closed deals |
-| `slack_highlights` | Slack Highlights | Notable messages, kudos, shoutouts |
-| `random_facts` | Random Fun Facts | Quirky observations, fun moments |
-| `gossip` | Office Gossip | Lighthearted mysteries, rumors, speculation |
+| `headline` | 📰 Breaking News | The biggest story of the week (always present) |
+| `gossip` | 👀 Office Gossip | Lighthearted mysteries, rumors, speculation (always present) |
+
+### Dynamic Section Examples
+
+The agent may create sections like:
+- `kudos` → "🎉 Kudos Corner" — for shoutouts and praise
+- `product_launches` → "🚀 Product Launches" — for shipped features
+- `new_hires` → "👋 Team News" — for team changes
+- `hot_topics` → "🔥 Hot Topics" — for interesting discussions
+- `wins` → "🏆 Weekly Wins" — for achievements
+
+The `getSectionLabel()` function in `src/schemas/article.ts` handles display labels:
+1. Uses custom `sectionLabel` if provided
+2. Falls back to defaults for known sections (headline, gossip)
+3. Auto-generates a label from the section ID for dynamic sections
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start dev server with hot reload (localhost:3000) |
-| `npm run agent` | Run the AI agent to generate a new edition |
+| `npm run agent` | Run the AI agent to generate a new edition (no audio) |
+| `npm run agent -- --include-audio` | Run the agent with audio generation enabled |
 | `npm run build:static` | Generate static HTML from mock data |
 | `npm run lint` | Run Biome linter |
 | `npm run lint:fix` | Run Biome with auto-fix |

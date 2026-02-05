@@ -2,11 +2,7 @@ import { openai } from "@ai-sdk/openai";
 import { Output, generateText, stepCountIs } from "ai";
 import { z } from "zod";
 import { MYSTICAL_REPORTER } from "../config.js";
-import {
-	type NewspaperEdition,
-	type SectionType,
-	SectionType as SectionTypeEnum,
-} from "../schemas/article.js";
+import type { NewspaperEdition } from "../schemas/article.js";
 import { slackTools } from "./tools.js";
 import { generateArticleAudio } from "./tts.js";
 
@@ -27,11 +23,20 @@ type SlackData = {
 	users: Map<string, string>;
 };
 
+type AnalyzedSection = {
+	id: string;
+	label: string;
+	sourceMessages: string[];
+	angle: string;
+};
+
 type AgentState = {
 	slackData: SlackData;
+	analyzedSections: AnalyzedSection[];
 	articles: Array<{
 		id: string;
-		section: SectionType;
+		section: string;
+		sectionLabel?: string;
 		headline: string;
 		byline: string;
 		lead: string;
@@ -43,18 +48,28 @@ type AgentState = {
 	currentStep: "gather" | "analyze" | "generate" | "audio" | "review" | "done";
 	editorNote?: string;
 	outputDir: string;
+	includeAudio: boolean;
 };
 
 const MIN_MESSAGES_REQUIRED = 3;
 
-export async function runAgent(outputDir = "dist/generated"): Promise<NewspaperEdition | null> {
+type AgentOptions = {
+	outputDir?: string;
+	includeAudio?: boolean;
+};
+
+export async function runAgent(options: AgentOptions = {}): Promise<NewspaperEdition | null> {
+	const { outputDir = "dist/generated", includeAudio = false } = options;
+
 	console.log("🔧 Initializing agent...");
 
 	const state: AgentState = {
 		slackData: { channels: [], messages: [], users: new Map() },
+		analyzedSections: [],
 		articles: [],
 		currentStep: "gather",
 		outputDir,
+		includeAudio,
 	};
 
 	while (state.currentStep !== "done") {
@@ -156,16 +171,36 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 }
 
 const AnalysisSchema = z.object({
-	headline: z.string().describe("The most newsworthy item that deserves the headline spot"),
+	headline: z
+		.object({
+			sourceMessages: z.array(z.string()).describe("Key quotes/content for the headline"),
+			angle: z.string().describe("The angle/hook for the headline article"),
+		})
+		.describe("The most newsworthy item that deserves the headline spot"),
 	sections: z
 		.array(
 			z.object({
-				type: z.enum(["weeks_wins", "slack_highlights", "random_facts", "gossip"]),
+				id: z
+					.string()
+					.describe(
+						"Section identifier (lowercase, underscores, e.g., 'product_launches', 'kudos', 'new_hires')",
+					),
+				label: z
+					.string()
+					.describe("Display label with emoji (e.g., '🚀 Product Launches', '🎉 Kudos Corner')"),
 				sourceMessages: z.array(z.string()).describe("Key quotes/content to use"),
 				angle: z.string().describe("The angle/hook for this article"),
 			}),
 		)
-		.describe("Other sections to generate"),
+		.describe(
+			"Dynamic sections based on content - create sections that fit the actual messages found",
+		),
+	gossip: z
+		.object({
+			sourceMessages: z.array(z.string()).describe("Anything mysterious, funny, or gossip-worthy"),
+			angle: z.string().describe("The gossip angle"),
+		})
+		.describe("The recurring gossip section - always included"),
 });
 
 async function analyzeStep(state: AgentState): Promise<void> {
@@ -180,17 +215,43 @@ async function analyzeStep(state: AgentState): Promise<void> {
 Gathered data:
 ${JSON.stringify(state.slackData.messages, null, 2)}
 
-Identify the most interesting/newsworthy items and categorize them into sections.`,
+Based on the ACTUAL content found, create appropriate sections. Don't use generic categories -
+create sections that reflect what's really in the messages. For example:
+- If there are product launches, create a "product_launches" section with label "🚀 Product Launches"
+- If there are kudos/shoutouts, create a "kudos" section with label "🎉 Kudos Corner"
+- If someone joined/left, create a "team_news" section with label "👋 Team News"
+- If there are interesting discussions, create a "hot_topics" section with label "🔥 Hot Topics"
+
+Be creative with section names based on the content. The gossip section is ALWAYS required.`,
 		output: Output.object({ schema: AnalysisSchema }),
 	});
 
-	console.log("  📋 Analysis complete:", analysis?.headline);
+	if (analysis) {
+		// Build the sections list: headline first, then dynamic sections, then gossip
+		state.analyzedSections = [
+			{
+				id: "headline",
+				label: "📰 Breaking News",
+				sourceMessages: analysis.headline.sourceMessages,
+				angle: analysis.headline.angle,
+			},
+			...analysis.sections,
+			{
+				id: "gossip",
+				label: "👀 Office Gossip",
+				sourceMessages: analysis.gossip.sourceMessages,
+				angle: analysis.gossip.angle,
+			},
+		];
+		console.log(`  📋 Analysis complete: ${state.analyzedSections.length} sections identified`);
+		console.log(`  📌 Sections: ${state.analyzedSections.map((s) => s.id).join(", ")}`);
+	}
+
 	state.currentStep = "generate";
 }
 
 // Schema for LLM output - all fields required (OpenAI strict mode requirement)
 const ArticleGenerationSchema = z.object({
-	section: SectionTypeEnum.describe("The section this article belongs to"),
 	headline: z.string().describe("Catchy newspaper-style headline"),
 	lead: z.string().describe("Opening paragraph that hooks the reader"),
 	body: z.string().describe("Main article content"),
@@ -200,45 +261,44 @@ const ArticleGenerationSchema = z.object({
 async function generateArticlesStep(state: AgentState): Promise<void> {
 	console.log("✍️ Generating articles...");
 
-	const sections: SectionType[] = [
-		"headline",
-		"weeks_wins",
-		"slack_highlights",
-		"random_facts",
-		"gossip",
-	];
-
-	for (const section of sections) {
-		console.log(`  📝 Generating ${section} article...`);
+	for (const section of state.analyzedSections) {
+		console.log(`  📝 Generating ${section.label} article...`);
 		try {
 			const { output: article } = await generateText({
 				model,
 				system: SYSTEM_PROMPT,
-				prompt: `Write a ${section} article based on this Slack data:
+				prompt: `Write an article for the "${section.label}" section based on this context:
 
+Section angle: ${section.angle}
+Key source content: ${section.sourceMessages.join("\n")}
+
+Full Slack data for reference:
 ${JSON.stringify(state.slackData.messages, null, 2)}
 
-Write in newspaper style. Be fun and engaging. The section is: ${section}
-Make sure to reference real messages and people from the data (or make up plausible content if no data).`,
+Write in newspaper style. Be fun and engaging.
+${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
+${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
+Make sure to reference real messages and people from the data.`,
 				output: Output.object({ schema: ArticleGenerationSchema }),
 			});
 
 			if (article) {
 				state.articles.push({
 					...article,
-					id: `art-${Date.now()}-${section}`,
-					section,
+					id: `art-${Date.now()}-${section.id}`,
+					section: section.id,
+					sectionLabel: section.label,
 					byline: MYSTICAL_REPORTER,
 					publishedAt: new Date().toISOString(),
 				});
 				console.log(`  ✅ Generated: ${article.headline}`);
 			}
 		} catch (error) {
-			console.error(`  ❌ Failed to generate ${section}:`, error);
+			console.error(`  ❌ Failed to generate ${section.label}:`, error);
 		}
 	}
 
-	state.currentStep = "audio";
+	state.currentStep = state.includeAudio ? "audio" : "review";
 }
 
 async function generateAudioStep(state: AgentState): Promise<void> {

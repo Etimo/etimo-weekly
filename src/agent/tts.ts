@@ -4,6 +4,11 @@ import { experimental_generateSpeech as generateSpeech } from "ai";
 
 const model = openai.speech("tts-1");
 
+function sanitizeTextForSpeech(text: string): string {
+	// Replace Slack user mentions like <@U0AD3F01V7G> with "a user"
+	return text.replace(/<@[A-Z0-9]+>/g, "a user");
+}
+
 export async function generateArticleAudio(
 	articleId: string,
 	headline: string,
@@ -11,13 +16,14 @@ export async function generateArticleAudio(
 	body: string,
 	outDir: string,
 ): Promise<string> {
-	const text = `${headline}. ${lead} ${body}`;
+	const rawText = `${headline}. ${lead} ${body}`;
+	const text = sanitizeTextForSpeech(rawText);
 
 	console.log(`    🎙️ Generating audio for: ${headline.slice(0, 40)}...`);
 
 	const { audio } = await generateSpeech({
 		model,
-		voice: "onyx", // Deep, authoritative voice for news
+		voice: "nova", // Warm, friendly, uplifting voice
 		text,
 	});
 

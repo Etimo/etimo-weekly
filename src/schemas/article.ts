@@ -1,18 +1,20 @@
 import { z } from "zod";
 
-export const SectionType = z.enum([
-	"headline",
-	"weeks_wins",
-	"slack_highlights",
-	"random_facts",
-	"gossip",
-]);
+// Dynamic sections - generated based on content
+// Only "gossip" is a recurring staple
+export const SectionType = z
+	.string()
+	.describe("Section identifier (e.g., 'headline', 'kudos', 'launches', 'gossip')");
 
 export type SectionType = z.infer<typeof SectionType>;
 
 export const ArticleSchema = z.object({
 	id: z.string(),
 	section: SectionType,
+	sectionLabel: z
+		.string()
+		.optional()
+		.describe("Display label for the section (e.g., '🚀 Product Launches')"),
 	headline: z.string().describe("Catchy newspaper-style headline"),
 	byline: z.string().optional().describe("Author or source attribution"),
 	lead: z.string().describe("Opening paragraph that hooks the reader"),
@@ -33,10 +35,17 @@ export const NewspaperEditionSchema = z.object({
 
 export type NewspaperEdition = z.infer<typeof NewspaperEditionSchema>;
 
-export const sectionLabels: Record<SectionType, string> = {
-	headline: "📰 Breaking News",
-	weeks_wins: "🏆 This Week's Wins",
-	slack_highlights: "💬 Slack Highlights",
-	random_facts: "🎲 Random Fun Facts",
-	gossip: "👀 Office Gossip",
-};
+// Generate a display label for any section
+export function getSectionLabel(section: string, label?: string): string {
+	if (label) return label;
+
+	// Default labels for known sections
+	const defaults: Record<string, string> = {
+		headline: "📰 Breaking News",
+		gossip: "👀 Office Gossip",
+	};
+
+	return (
+		defaults[section] ?? `📌 ${section.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`
+	);
+}

@@ -4,9 +4,16 @@ import { renderNewspaper } from "../templates/render.js";
 import { runAgent } from "./index.js";
 
 async function main() {
-	console.log("🚀 Starting Etimo Weekly agent...\n");
+	const includeAudio = process.argv.includes("--include-audio");
 
-	const edition = await runAgent();
+	console.log("🚀 Starting Etimo Weekly agent...");
+	if (!includeAudio) {
+		console.log("   (Audio generation disabled. Use --include-audio to enable.)\n");
+	} else {
+		console.log("   (Audio generation enabled.)\n");
+	}
+
+	const edition = await runAgent({ includeAudio });
 
 	if (!edition) {
 		console.log("\n🛑 No edition generated. Exiting.");

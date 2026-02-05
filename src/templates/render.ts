@@ -1,5 +1,5 @@
 import { MYSTICAL_REPORTER, REPORTER_TAGLINE } from "../config.js";
-import { type Article, type NewspaperEdition, sectionLabels } from "../schemas/article.js";
+import { type Article, type NewspaperEdition, getSectionLabel } from "../schemas/article.js";
 
 function renderByline(byline: string | undefined): string {
 	if (!byline) return "";
@@ -20,9 +20,9 @@ function renderAudioPlayer(audioFile: string | undefined): string {
 
 function renderArticle(article: Article): string {
 	return `
-		<article class="article article--${article.section}">
+		<article class="article article--${article.section.replace(/\s+/g, "_")}">
 			<header class="article__header">
-				<span class="article__section">${sectionLabels[article.section]}</span>
+				<span class="article__section">${getSectionLabel(article.section, article.sectionLabel)}</span>
 				<h2 class="article__headline">${article.headline}</h2>
 				${renderByline(article.byline)}
 				${renderAudioPlayer(article.audioFile)}
