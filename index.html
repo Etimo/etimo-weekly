@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Etimo Weekly - Edition #110</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--color-bg: #f5f2e8;
+			--color-paper: #fffef9;
+			--color-ink: #1a1a1a;
+			--color-ink-light: #4a4a4a;
+			--color-accent: #8b0000;
+			--color-border: #2a2a2a;
+		}
+
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+
+		body {
+			font-family: 'Source Serif 4', Georgia, serif;
+			background: var(--color-bg);
+			color: var(--color-ink);
+			line-height: 1.6;
+		}
+
+		.newspaper {
+			max-width: 1200px;
+			margin: 0 auto;
+			background: var(--color-paper);
+			min-height: 100vh;
+			box-shadow: 0 0 50px rgba(0,0,0,0.1);
+		}
+
+		.masthead {
+			text-align: center;
+			padding: 2rem 1rem;
+			border-bottom: 3px double var(--color-border);
+		}
+
+		.masthead__title {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: clamp(3rem, 8vw, 6rem);
+			font-weight: 900;
+			letter-spacing: -0.02em;
+			text-transform: uppercase;
+		}
+
+		.masthead__meta {
+			font-family: 'Inter', sans-serif;
+			font-size: 0.875rem;
+			margin-top: 0.5rem;
+			color: var(--color-ink-light);
+			display: flex;
+			justify-content: center;
+			gap: 2rem;
+		}
+
+		.editor-note {
+			font-style: italic;
+			text-align: center;
+			padding: 1rem 2rem;
+			border-bottom: 1px solid var(--color-border);
+			background: linear-gradient(to bottom, var(--color-paper), #f9f7f0);
+		}
+
+		.content {
+			display: grid;
+			grid-template-columns: repeat(12, 1fr);
+			gap: 1px;
+			background: var(--color-border);
+			padding: 1px;
+		}
+
+		.article {
+			background: var(--color-paper);
+			padding: 1.5rem;
+		}
+
+		.article--headline {
+			grid-column: span 12;
+			text-align: center;
+			border-bottom: 2px solid var(--color-border);
+		}
+
+		.article--headline .article__headline {
+			font-size: clamp(2rem, 5vw, 3.5rem);
+		}
+
+		/* Default: all non-headline articles span 6 columns (2-column layout) */
+		.article:not(.article--headline) {
+			grid-column: span 6;
+		}
+
+		/* Gossip section spans full width at the bottom */
+		.article--gossip {
+			grid-column: span 12;
+		}
+
+		@media (max-width: 768px) {
+			.article:not(.article--headline) {
+				grid-column: span 12;
+			}
+		}
+
+		.article__section {
+			font-family: 'Inter', sans-serif;
+			font-size: 0.75rem;
+			font-weight: 500;
+			text-transform: uppercase;
+			letter-spacing: 0.1em;
+			color: var(--color-accent);
+		}
+
+		.article__headline {
+			font-family: 'Playfair Display', Georgia, serif;
+			font-size: 1.75rem;
+			font-weight: 700;
+			margin: 0.5rem 0;
+			line-height: 1.2;
+		}
+
+		.article__byline {
+			font-family: 'Inter', sans-serif;
+			font-size: 0.8rem;
+			color: var(--color-ink-light);
+			margin-bottom: 1rem;
+		}
+
+		.byline-tagline {
+			font-style: italic;
+			opacity: 0.7;
+		}
+
+		.article__lead {
+			font-weight: 600;
+			font-size: 1.1rem;
+			margin-bottom: 1rem;
+		}
+
+		.article__body {
+			text-align: justify;
+			hyphens: auto;
+		}
+
+		.article__tags {
+			margin-top: 1rem;
+			font-family: 'Inter', sans-serif;
+			font-size: 0.75rem;
+		}
+
+		.tag {
+			color: var(--color-ink-light);
+			margin-right: 0.5rem;
+		}
+
+		.listen-btn {
+			display: inline-flex;
+			align-items: center;
+			gap: 0.4rem;
+			padding: 0.4rem 0.8rem;
+			margin-top: 0.5rem;
+			font-family: 'Inter', sans-serif;
+			font-size: 0.75rem;
+			font-weight: 500;
+			color: var(--color-ink);
+			background: var(--color-bg);
+			border: 1px solid var(--color-border);
+			border-radius: 2rem;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.listen-btn:hover {
+			background: var(--color-ink);
+			color: var(--color-paper);
+		}
+
+		.listen-btn.playing {
+			background: var(--color-accent);
+			color: var(--color-paper);
+			border-color: var(--color-accent);
+		}
+
+		.listen-btn.playing .listen-text::after {
+			content: 'ing';
+		}
+
+		.listen-icon {
+			font-size: 1rem;
+		}
+
+		.footer {
+			text-align: center;
+			padding: 2rem;
+			border-top: 3px double var(--color-border);
+			font-family: 'Inter', sans-serif;
+			font-size: 0.875rem;
+			color: var(--color-ink-light);
+		}
+	</style>
+</head>
+<body>
+	<main class="newspaper">
+		<header class="masthead">
+			<h1 class="masthead__title">Etimo Weekly</h1>
+			<div class="masthead__meta">
+				<span>Edition #110</span>
+				<span>Thursday, February 5, 2026</span>
+				<span>Stockholm, Sweden</span>
+			</div>
+		</header>
+
+		<div class="editor-note">"Greetings, daring readers! As you dive into this week’s tantalizing tales, remember: in the world of Etimo, nothing is as it seems, and Sven ‘The Shadow’ Spansen is always one step ahead with the juiciest jive. Enjoy the intrigue!" — The Editor</div>
+
+		<div class="content">
+			
+		<article class="article article--headline">
+			<header class="article__header">
+				<span class="article__section">📰 Breaking News</span>
+				<h2 class="article__headline">Etimo's Ocean's Eleven: The Inside Scoop on SEB's Exclusive Restaurant Caper</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">In a playful nod to Hollywood's finest heist films, Erik Malm and his team are planning a clever venture into SEB's exclusive dining domain.</p>
+			<div class="article__body"><p>Deep within the corridors of SEB, a haven for high-profile clients hides in plain sight—a restaurant cloaked in mystery and reserved strictly for external VIPs. However, daring whispers have reached <em>The Shadow</em> that a certain Erik Malm has set his sights on this elusive eatery.</p>
+<p>In a move reminiscent of Danny Ocean’s meticulous plots, Erik is spearheading a <strong>team activity</strong> with a twist. His goal? To craft a perfectly legitimate pretense to slip through the kitchen's golden doors and taste the luxury that lies beyond.</p>
+<p>"Like Ocean's Eleven, but with PowerPoint," Erik teased on Slack, garnering a chorus of ninja emojis from his colleagues. He even has the informal green light from their local group chief, turning this caper into a team-wide event!</p>
+<p>With hearts pounding like Sinatra's big band drumming up the tension, the excitement among Etimo's employees is palpable. One can't help but wonder if this escapade will conclude with a grand revelation—or perhaps just an exceptionally well-catered debrief.</p>
+<p>Stay tuned, dear readers, as we unpeel the layers of this delicious scheme. Will they succeed in their quest for culinary conquest, or will the curtains fall before the appetizers are served?</p></div>
+			<footer class="article__tags"><span class="tag">#SEB</span> <span class="tag">#restaurant</span> <span class="tag">#team activity</span> <span class="tag">#Etimo</span> <span class="tag">#heist</span></footer>
+		</article>
+	
+			
+		<article class="article article--event_planning">
+			<header class="article__header">
+				<span class="article__section">🗓️ Event Planning Shenanigans</span>
+				<h2 class="article__headline">The Great Heist: Team's Audacious Plan to Dine in Style</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">In a plot worthy of Hollywood, Erik Malm's team is plotting an extraordinary 'team outing' to infiltrate an exclusive venue.</p>
+			<div class="article__body"><p>Every office has its secrets, but Erik Malm and his intrepid crew might just have concocted the most outlandish plan yet. In a twist straight out of <em>Ocean's Eleven</em>, Erik has devised a brilliant scheme to gain entry to an exclusive restaurant usually reserved for the upper echelons of business society.</p>
+
+<p>The team, fueled by equal parts ambition and curiosity, has rallied under Erik's charismatic leadership. According to Erik's clever idea, the so-called "team activity" is a clever ruse to step into the hallowed halls usually off-limits to mere mortals.</p>
+
+<p>Whispers in the Slack corridors suggest that Erik's proposition has not only captured the imagination of his colleagues but also won the blessing of their local team leader. "Our local group chief seems to support it," Erik quipped with his characteristic devil-may-care attitude.</p>
+
+<p>It's a daring caper that could very well serve as the script for the next blockbuster, but Erik and his crew are ready to pull it off with flair. Armed with distant dreams of grandeur—and perhaps a pinch of mischief—the team is set to orchestrate the perfect social coup.</p>
+
+<p>How Sven "The Shadow" Spansen discovered this plot remains a mystery. But as the sun sets behind the city's skyline, one can't help but wonder what tales the walls of that restaurant will tell after the team's visit.</p></div>
+			<footer class="article__tags"><span class="tag">#Event Planning</span> <span class="tag">#Team Building</span> <span class="tag">#Office Fun</span> <span class="tag">#Creative Strategy</span></footer>
+		</article>
+	
+		<article class="article article--tech_and_gadgets">
+			<header class="article__header">
+				<span class="article__section">🔌 Tech & Gadgets</span>
+				<h2 class="article__headline">Joakim Olesen's Powerbank Powers Up Intrigue at Etimo</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">In the buzzing universe of Etimo's tech maestros, Joakim Olesen's powerbank has become the talk of the town, sparking curiosity and excitement among colleagues.</p>
+			<div class="article__body"><p>When one thinks of electrifying gadgets at Etimo, Joakim Olesen’s new powerbank has surprisingly taken the spotlight. Known for his keen interest in tech, Olesen recently shared details of his latest find, a powerbank ordered from ComputerSalg, that has everyone flipping their switches.</p>
+<p><strong>"Jättemånga verkar mycket intresserade av min powerbank,"</strong> exclaimed Joakim with a hint of enthusiasm. His post on the company Slack channel ignited a wildfire of interest, as colleagues couldn’t help but be drawn to his tech insight.</p>
+<p>The powerbank, noted for its efficiency, lists a series of features that go beyond mere backup power. With a nod to its <em>USB-C capability</em>, Joakim relayed its speed advantages, casting a light on the drawbacks of magnetic charging due to his modern pop socket.</p>
+<p>Jeanette Britan, another Etimo tech aficionado, didn’t miss out on Joakim’s insights. Meanwhile, <strong>Björn Wahlberg</strong> was seen showing hearty appreciation, signaling a shared tech enthusiasm among the group.</p>
+<p>As whispers of this gadget marvel continue to sizzle through Etimo's tech corridors, one can’t help but wonder if Joakim’s next revelation will be equally electrifying.</p></div>
+			<footer class="article__tags"><span class="tag">#Tech</span> <span class="tag">#Gadgets</span> <span class="tag">#Joakim Olesen</span> <span class="tag">#Powerbank</span></footer>
+		</article>
+	
+		<article class="article article--team_news">
+			<header class="article__header">
+				<span class="article__section">👋 Team News</span>
+				<h2 class="article__headline">Nora Cromell Joins the Etimo Ranks: Exciting Times Ahead!</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">Etimo welcomes Nora Cromell to our ever-expanding team! With fresh ideas and enthusiasm, she steps into the fold, promising exciting times ahead.</p>
+			<div class="article__body"><p>The air is electric with excitement as Nora Cromell steps into the Etimo realm, making her official debut in our hallowed halls. As whispers of intrigue spread and virtual handshakes are exchanged, we find ourselves eager to unravel what wonders she is set to unleash. This mysterious new member, named in a Swift-like channel joining, signals much more than just her presence.</p>
+
+<p>Björn Wahlberg, our very own heart emoji dealer, and Erik Malm, freshly emerging from plotting daring team activities, have already embraced this new chapter. Nora’s inclusion promises to blend seamlessly with the team’s diverse tapestry of talents, with Erik undoubtedly planning to involve her in his Ocean's Eleven-style team escapades!</p>
+
+<p>But who, you may ask, is Nora Cromell? Perhaps the shadows know more than we let on. Her potential seems boundless, yet just like Sven 'The Shadow' Spansen, she too holds an air of delightful mystery. We sensed the excitement rippling through the Slack sphere even before the news dropped.</p>
+
+<p>This is a time of joyous expansion, dear readers. As Nora joins the ranks, so does a wave of potential innovation and creativity. May her time with us be as rewarding as it is exciting. Let the welcoming applause echo!</p></div>
+			<footer class="article__tags"><span class="tag">#Etimo</span> <span class="tag">#New Team Member</span> <span class="tag">#Nora Cromell</span> <span class="tag">#Team Expansion</span></footer>
+		</article>
+	
+		<article class="article article--hobby_corner">
+			<header class="article__header">
+				<span class="article__section">🎨 Hobby Corner</span>
+				<h2 class="article__headline">Joakim's Charming Frame Hunt Ignites Artistic Frenzy</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">Joakim Olesen's recent quest for the perfect picture frames has the Etimo team buzzing with artistic fervor.</p>
+			<div class="article__body"><p><strong>Joakim Olesen</strong> recently set off on a noble quest, sparking a creative dialogue across Etimo's corridors. The mission? To find the ideal frames for his new poster collection. Joakim managed to capture the attention of many with his passionate inquiry, saying, "I’ve bought four posters that I want to frame. Does anyone have suggestions on where to buy frames?"</p>
+
+<p>With each piece varying in size, Joakim explored options and discovered that <a href="https://maps.app.goo.gl/vBupw8vqNEuPMKXA8">FRAME IT Ramar & Inramning</a> might just be the treasure spot for his needs, though at a cost of 7,000 SEK for all four frames. "Is this normal, or am I being bamboozled?" he mused, inviting insights from his team. <strong>Björn Wahlberg</strong> suggested venturing beyond traditional options, while others chimed in with witty yet sound advice.</p>
+
+<p>The lively discussion rolled like a beautiful piece of art being unveiled, encouraging everyone to revisit their own walls. As whispers of opportunities to frame memories and art masterpieces echoed, Joakim's earnest endeavor reminded Sven ‘The Shadow’ Spansen of the eternal truth: a well-chosen frame does more than hold art; it completes it.</p></div>
+			<footer class="article__tags"><span class="tag">#Art</span> <span class="tag">#Joakim Olesen</span> <span class="tag">#Hobby Corner</span> <span class="tag">#Picture Frames</span> <span class="tag">#Etimo Community</span></footer>
+		</article>
+	
+		<article class="article article--gossip">
+			<header class="article__header">
+				<span class="article__section">👀 Office Gossip</span>
+				<h2 class="article__headline">Erik Malm's Great Escape: Dodging the Dreaded PR Day Marathon!</h2>
+				<p class="article__byline">By Sven 'The Shadow' Spansen <span class="byline-tagline">— who somehow always knows, yet nobody has ever seen in the flesh</span></p>
+				
+			</header>
+			<p class="article__lead">In a daring twist of fate, Erik Malm deftly dodges SEB's all-day PR meeting, enjoying an almost-meeting-free haven while colleagues remain trapped in the endless agenda.</p>
+			<div class="article__body"><p>Ah, the annual PR Day at SEB—a day notorious for confining employees to a room for eight grueling hours of future banking chatter. Yet, not all were ensnared by these shackles of decorum. Enter Erik Malm, the veritable Houdini of the office scene, who, with a masterstroke of quick thinking, managed what seemed impossible. </p>
+
+<p>According to our sources (who shall remain as mysterious as Sven 'The Shadow' himself), Erik made a last-minute appeal to his scrum master, orchestrating an escape worthy of a heist movie. The result? A blissfully meeting-free day while his colleagues, oblivious to his cunning, waded through PowerPoint purgatory.</p>
+
+<p>Indeed, Erik is no stranger to ingenious exploits. In earlier whispers circulating through the digital hallways, he mused about staging an elaborate team activity to infiltrate SEB's exclusive restaurant—a plan worthy of Danny Ocean himself. With his local group chief possibly turning a blind eye, who knows what other escapades Erik might have up his sleeve?</p>
+
+<p>As Erik enjoys his newfound freedom, one can't help but wonder: what other office escapades unfold beyond the echoing halls of Slack? Stay tuned, dear readers, for more sneak peeks into Etimo's labyrinthine office antics.</p></div>
+			<footer class="article__tags"><span class="tag">#Office Gossip</span> <span class="tag">#PR Day</span> <span class="tag">#Erik Malm</span> <span class="tag">#SEB</span> <span class="tag">#Workplace Shenanigans</span></footer>
+		</article>
+	
+		</div>
+
+		<footer class="footer">
+			<p>© 2026 Etimo Weekly — All the news that's fit to Slack</p>
+		</footer>
+	</main>
+</body>
+</html>
