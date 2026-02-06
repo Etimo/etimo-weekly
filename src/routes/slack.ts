@@ -85,7 +85,7 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 	const rateLimitHandler = createSlackRateLimitHandler(fastify);
 
 	app.post("/slack/events", {
-		// preHandler: rateLimitHandler,
+		preHandler: rateLimitHandler,
 		schema: {
 			tags: ["Slack"],
 			summary: "Slack Events API webhook",

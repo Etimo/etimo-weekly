@@ -3,9 +3,10 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { generatePdf } from "../pdf.js";
 import { LLMServiceFactory } from "../services/llm/LLMServiceFactory.js";
 import { SlackServiceFactory } from "../services/slack/SlackServiceFactory.js";
-import { FileTipsService } from "../services/tips/FileTipService.js";
+import { FileTipsRepository } from "../repositories/FileTipsRepository.js";
 import { TTSServiceFactory } from "../services/tts/TTSServiceFactory.js";
 import { renderNewspaper } from "../templates/render.js";
+import { setCustomEmojis } from "../utils/emoji.js";
 import { runAgent } from "./index.js";
 
 async function main() {
@@ -25,7 +26,12 @@ async function main() {
 	const slack = SlackServiceFactory.create();
 	const llm = LLMServiceFactory.create();
 	const tts = TTSServiceFactory.create();
-	const tips = new FileTipsService();
+	const tips = new FileTipsRepository();
+
+	// Fetch custom emojis before running the agent (for rendering)
+	console.log("🎨 Fetching custom emojis...");
+	const customEmojis = await slack.getCustomEmojis();
+	setCustomEmojis(customEmojis);
 
 	const edition = await runAgent({ slack, llm, tts, tips }, { includeAudio });
 
@@ -48,8 +54,10 @@ async function main() {
 	// Optionally save HTML for debugging
 	if (includeHtml) {
 		const html = renderNewspaper(edition);
+		const htmlFilename = `etimo-veckoblad-${edition.editionNumber}.html`;
+		writeFileSync(`${outDir}/${htmlFilename}`, html);
 		writeFileSync(`${outDir}/index.html`, html);
-		console.log(`✅ Saved HTML to ${outDir}/index.html`);
+		console.log(`✅ Saved HTML to ${outDir}/${htmlFilename} (and index.html)`);
 	}
 }
 

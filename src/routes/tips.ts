@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { env } from "../env.js";
-import type { IFileTipsService } from "../services/tips/ITipsService.js";
-import { FileTipsService } from "../services/tips/FileTipService.js";
+import type { ITipsRepository } from "../repositories/ITipsRepository.js";
+import { FileTipsRepository } from "../repositories/FileTipsRepository.js";
 
 const TipSchema = z.object({
 	id: z.string(),
@@ -29,11 +29,11 @@ const ErrorResponseSchema = z.object({
 });
 
 // Singleton instance
-let tipsService: IFileTipsService | null = null;
+let tipsService: ITipsRepository | null = null;
 
-export function getTipsService(): IFileTipsService {
+export function getTipsService(): ITipsRepository {
 	if (!tipsService) {
-		tipsService = new FileTipsService();
+		tipsService = new FileTipsRepository();
 	}
 	return tipsService;
 }

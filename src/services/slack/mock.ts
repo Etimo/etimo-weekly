@@ -1,5 +1,5 @@
 import type { SlackChannel, SlackMessage, SlackSearchResult, SlackUser } from "../types.js";
-import type { ISlackService } from "./ISlackService.js";
+import type { CustomEmojiMap, ISlackService } from "./ISlackService.js";
 
 const MOCK_CHANNELS: SlackChannel[] = [
 	{ id: "C001", name: "general", topic: "Company-wide announcements", memberCount: 50 },
@@ -151,5 +151,14 @@ export class MockSlackService implements ISlackService {
 	): Promise<Array<{ user: string; text: string }>> {
 		console.log(`    [Mock Slack] Returning mock thread replies for ${ts}`);
 		return MOCK_THREAD_REPLIES[ts] ?? [];
+	}
+
+	async getCustomEmojis(): Promise<CustomEmojiMap> {
+		console.log("    [Mock Slack] Returning mock custom emojis");
+		return {
+			parrot: "https://emoji.slack-edge.com/T123/parrot/abc123.gif",
+			etimo: "https://emoji.slack-edge.com/T123/etimo/def456.png",
+			shipit: "alias:rocket",
+		};
 	}
 }

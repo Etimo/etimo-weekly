@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { IFileTipsService, Tip } from "./ITipsService.js";
+import type { ITipsRepository, Tip } from "./ITipsRepository.js";
 
-export class FileTipsService implements IFileTipsService {
+export class FileTipsRepository implements ITipsRepository {
 	private filePath: string;
 
 	constructor(filePath = "data/tips.json") {

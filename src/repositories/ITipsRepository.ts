@@ -4,7 +4,7 @@ export type Tip = {
 	receivedAt: string;
 };
 
-export interface IFileTipsService {
+export interface ITipsRepository {
 	saveTip(text: string): Promise<Tip>;
 	getTips(): Promise<Tip[]>;
 	clearTips(): Promise<void>;

@@ -6,11 +6,12 @@ import {
 	generateCrosswordGrid,
 	type CrosswordPuzzle,
 } from "../crossword/index.js";
-import { EditionStore } from "../persistence/edition-store.js";
+import { FileEditionRepository } from "../repositories/FileEditionRepository.js";
+import { crosswordToPersisted } from "../repositories/IEditionRepository.js";
+import type { ITipsRepository, Tip } from "../repositories/ITipsRepository.js";
 import type { NewspaperEdition, PreviousCrosswordSolution } from "../schemas/article.js";
 import type { ILLMService } from "../services/llm/ILLMService.js";
 import type { ISlackService } from "../services/slack/ISlackService.js";
-import type { IFileTipsService, Tip } from "../services/tips/ITipsService.js";
 import type { ITTSService } from "../services/tts/ITTSService.js";
 import { getReporterForSection, RECURRING_COLUMNS, type Reporter } from "./reporters.js";
 
@@ -89,11 +90,18 @@ function replaceUserIds(text: string, users: Map<string, string>): string {
 	});
 }
 
+function replaceChannelIds(text: string, channels: Map<string, string>): string {
+	return text.replace(/<#([A-Z0-9]+)(?:\|[^>]*)?>/g, (_, channelId) => {
+		const name = channels.get(channelId);
+		return name ? `#${name}` : "#unknown-channel";
+	});
+}
+
 export type AgentDependencies = {
 	slack: ISlackService;
 	llm: ILLMService;
 	tts: ITTSService;
-	tips: IFileTipsService;
+	tips: ITipsRepository;
 };
 
 export type AgentOptions = {
@@ -110,7 +118,7 @@ export async function runAgent(
 	console.log("🔧 Initializing agent...");
 
 	// Initialize edition store for persistence
-	const editionStore = new EditionStore();
+	const editionStore = new FileEditionRepository();
 	const editionNumber = editionStore.getNextEditionNumber();
 	console.log(`  📰 Generating edition #${editionNumber}`);
 
@@ -173,7 +181,7 @@ export async function runAgent(
 	editionStore.saveEdition({
 		editionNumber: state.editionNumber,
 		editionDate: new Date().toISOString(),
-		crossword: state.crossword ? EditionStore.crosswordToPersisted(state.crossword) : undefined,
+		crossword: state.crossword ? crosswordToPersisted(state.crossword) : undefined,
 	});
 
 	return {
@@ -385,6 +393,7 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions, cod
 	for (const msg of state.slackData.messages) {
 		if (msg.text) {
 			msg.text = replaceUserIds(msg.text, state.slackData.users);
+			msg.text = replaceChannelIds(msg.text, channelMap);
 		}
 		if (msg.user && state.slackData.users.has(msg.user)) {
 			msg.user = state.slackData.users.get(msg.user) as string;

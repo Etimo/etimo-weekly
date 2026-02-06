@@ -6,6 +6,7 @@ import {
 	type PreviousCrosswordSolution,
 	getSectionLabel,
 } from "../schemas/article.js";
+import { convertEmojiShortcodes } from "../utils/emoji.js";
 
 function renderByline(byline: string | undefined): string {
 	if (!byline) return "";
@@ -16,10 +17,10 @@ function renderByline(byline: string | undefined): string {
 function renderFrontPageHeadline(article: Article): string {
 	return `
 		<article class="headline-article">
-			<h2 class="headline-article__title">${article.headline}</h2>
+			<h2 class="headline-article__title">${convertEmojiShortcodes(article.headline)}</h2>
 			${renderByline(article.byline)}
-			<p class="headline-article__lead">${article.lead}</p>
-			<div class="headline-article__body">${article.body}</div>
+			<p class="headline-article__lead">${convertEmojiShortcodes(article.lead)}</p>
+			<div class="headline-article__body">${convertEmojiShortcodes(article.body)}</div>
 			${article.tags?.length ? `<div class="tags">${article.tags.map((t) => `<span class="tag">#${t}</span>`).join(" ")}</div>` : ""}
 		</article>
 	`;
@@ -28,9 +29,9 @@ function renderFrontPageHeadline(article: Article): string {
 function renderFrontPageTeaser(article: Article): string {
 	return `
 		<div class="teaser">
-			<span class="teaser__section">${getSectionLabel(article.section, article.sectionLabel)}</span>
-			<h3 class="teaser__title">${article.headline}</h3>
-			<p class="teaser__lead">${article.lead}</p>
+			<span class="teaser__section">${convertEmojiShortcodes(getSectionLabel(article.section, article.sectionLabel))}</span>
+			<h3 class="teaser__title">${convertEmojiShortcodes(article.headline)}</h3>
+			<p class="teaser__lead">${convertEmojiShortcodes(article.lead)}</p>
 		</div>
 	`;
 }
@@ -39,12 +40,12 @@ function renderArticle(article: Article): string {
 	return `
 		<article class="article">
 			<header class="article__header">
-				<span class="article__section">${getSectionLabel(article.section, article.sectionLabel)}</span>
-				<h2 class="article__headline">${article.headline}</h2>
+				<span class="article__section">${convertEmojiShortcodes(getSectionLabel(article.section, article.sectionLabel))}</span>
+				<h2 class="article__headline">${convertEmojiShortcodes(article.headline)}</h2>
 				${renderByline(article.byline)}
 			</header>
-			<p class="article__lead">${article.lead}</p>
-			<div class="article__body">${article.body}</div>
+			<p class="article__lead">${convertEmojiShortcodes(article.lead)}</p>
+			<div class="article__body">${convertEmojiShortcodes(article.body)}</div>
 			${article.tags?.length ? `<div class="tags">${article.tags.map((t) => `<span class="tag">#${t}</span>`).join(" ")}</div>` : ""}
 		</article>
 	`;
@@ -167,7 +168,7 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 	<title>Etimo Veckoblad - Utgåva #${edition.editionNumber}</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=Inter:wght@400;500;600&family=Noto+Color+Emoji&display=swap" rel="stylesheet">
 	<style>
 		@page {
 			size: 11in 17in;
@@ -195,6 +196,11 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 			line-height: 1.4;
 			color: var(--color-ink);
 			background: var(--color-paper);
+		}
+
+		/* Emoji font fallback for proper emoji rendering */
+		body {
+			font-family: 'Source Serif 4', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', Georgia, serif;
 		}
 
 		/* ===================
@@ -610,7 +616,7 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 			</div>
 		</header>
 
-		${edition.editorNote ? `<div class="editor-note">"${edition.editorNote}" — Redaktören</div>` : ""}
+		${edition.editorNote ? `<div class="editor-note">"${convertEmojiShortcodes(edition.editorNote)}" — Redaktören</div>` : ""}
 
 		<div class="front-content">
 			<div class="headline-column">

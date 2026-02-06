@@ -1,6 +1,6 @@
 import { WebClient } from "@slack/web-api";
 import type { SlackChannel, SlackMessage, SlackSearchResult, SlackUser } from "../types.js";
-import type { ISlackService } from "./ISlackService.js";
+import type { CustomEmojiMap, ISlackService } from "./ISlackService.js";
 
 export class RealSlackService implements ISlackService {
 	private client: WebClient;
@@ -12,7 +12,7 @@ export class RealSlackService implements ISlackService {
 	async listChannels(limit = 100): Promise<SlackChannel[]> {
 		try {
 			const result = await this.client.users.conversations({
-				types: "public_channel",
+				types: "public_channel,private_channel",
 				limit,
 			});
 			console.log(`    [Slack] Bot is member of ${result.channels?.length ?? 0} channels`);
@@ -120,6 +120,20 @@ export class RealSlackService implements ISlackService {
 			const err = error as { data?: { error?: string } };
 			console.error(`    [Slack] Error fetching thread ${ts}:`, err.data?.error ?? error);
 			return [];
+		}
+	}
+
+	async getCustomEmojis(): Promise<CustomEmojiMap> {
+		try {
+			console.log("    [Slack] Fetching custom emojis...");
+			const result = await this.client.emoji.list();
+			const emojis = (result.emoji as CustomEmojiMap) ?? {};
+			console.log(`    [Slack] Got ${Object.keys(emojis).length} custom emojis`);
+			return emojis;
+		} catch (error: unknown) {
+			const err = error as { data?: { error?: string } };
+			console.error("    [Slack] Error fetching emojis:", err.data?.error ?? error);
+			return {};
 		}
 	}
 }

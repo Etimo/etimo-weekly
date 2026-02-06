@@ -1,18 +1,18 @@
 import { existsSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FileTipsService } from "./FileTipService.js";
+import { FileTipsRepository } from "./FileTipsRepository.js";
 
 const TEST_FILE = "data/tips-test.json";
 
-describe("FileTipsService", () => {
-	let service: FileTipsService;
+describe("FileTipsRepository", () => {
+	let service: FileTipsRepository;
 
 	beforeEach(() => {
 		// Clean up before each test
 		if (existsSync(TEST_FILE)) {
 			rmSync(TEST_FILE);
 		}
-		service = new FileTipsService(TEST_FILE);
+		service = new FileTipsRepository(TEST_FILE);
 	});
 
 	afterEach(() => {
@@ -42,7 +42,7 @@ describe("FileTipsService", () => {
 			await service.saveTip("Second tip");
 
 			// Create new instance to verify persistence
-			const newService = new FileTipsService(TEST_FILE);
+			const newService = new FileTipsRepository(TEST_FILE);
 			const tips = await newService.getTips();
 
 			expect(tips).toHaveLength(2);
