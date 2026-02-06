@@ -8,7 +8,7 @@ import type {
 	ILLMService,
 } from "./ILLMService.js";
 
-export class RealLLMService implements ILLMService {
+export class OpenAiLLMService implements ILLMService {
 	private model;
 
 	constructor(modelId = "gpt-4o") {
@@ -31,7 +31,7 @@ export class RealLLMService implements ILLMService {
 			model: this.model,
 			system: options.system,
 			prompt: options.prompt,
-			tools: options.tools as Parameters<typeof generateText>[0]["tools"],
+			tools: options.tools,
 			stopWhen: stepCountIs(options.maxSteps ?? 10),
 		});
 

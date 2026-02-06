@@ -1,7 +1,7 @@
 import { env } from "../../env.js";
 import type { ILLMService } from "./ILLMService.js";
-import { MockLLMService } from "./mock.js";
-import { RealLLMService } from "./real.js";
+import { MockLLMService } from "./MockLLMService.js";
+import { OpenAiLLMService } from "./OpenAiLLmService.js";
 
 export type LLMServiceType = "openai" | "fake";
 
@@ -15,6 +15,6 @@ export class LLMServiceFactory {
 		}
 
 		console.log(`  🔌 LLM: using OpenAI (${env.OPENAI_MODEL})`);
-		return new RealLLMService(env.OPENAI_MODEL);
+		return new OpenAiLLMService(env.OPENAI_MODEL);
 	}
 }

@@ -1,5 +1,6 @@
 import type { z } from "zod";
 import type { LLMGenerateResult, LLMStep } from "../types.js";
+import type { generateText } from "ai";
 
 export type GenerateTextOptions = {
 	system?: string;
@@ -7,7 +8,7 @@ export type GenerateTextOptions = {
 };
 
 export type GenerateWithToolsOptions = GenerateTextOptions & {
-	tools: Record<string, unknown>;
+	tools: Parameters<typeof generateText>[0]["tools"];
 	maxSteps?: number;
 };
 
