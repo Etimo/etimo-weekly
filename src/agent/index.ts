@@ -543,7 +543,7 @@ async function analyzeStep(state: AgentState, deps: AgentDependencies): Promise<
 ANONYMOUS TIPS (submitted by readers for the gossip column):
 ${state.anonymousTips.map((t) => `- "${t.text}"`).join("\n")}
 
-These tips are ANONYMOUS - do not try to identify who sent them. Use them as inspiration for the gossip section!`
+These tips are ANONYMOUS - do not try to identify who sent them. Use them as inspiration for the gossip section. IMPORTANT: If any tip contains names of people, strip the names out and replace with anonymous references. The gossip column must NEVER include real names or identifying hints.`
 			: "";
 
 	// Build channel-specific content sections for the prompt
@@ -658,10 +658,10 @@ ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and drama
 ${
 	section.id === "gossip"
 		? `This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!
-${state.anonymousTips.length > 0 ? `\nANONYMOUS TIPS to incorporate:\n${state.anonymousTips.map((t) => `- "${t.text}"`).join("\n")}\nThese tips are ANONYMOUS - weave them into the gossip naturally without revealing sources!` : ""}`
-		: ""
-}
-Reference real people by name from the data. Use their actual names, not IDs.`,
+CRITICAL: Do NOT include any names of real people in the gossip column. Do NOT use initials or any identifying hints. Keep everything completely anonymous using vague references like "en mystisk kollega", "någon på kontoret", "en anonym källa" etc.
+${state.anonymousTips.length > 0 ? `\nANONYMOUS TIPS to incorporate:\n${state.anonymousTips.map((t) => `- "${t.text}"`).join("\n")}\nThese tips are ANONYMOUS - weave them into the gossip naturally. If a tip contains any names, strip them out and replace with anonymous references. NEVER hint at who sent these tips!` : ""}`
+		: "Reference real people by name from the data. Use their actual names, not IDs."
+}`,
 			});
 
 			if (article) {
