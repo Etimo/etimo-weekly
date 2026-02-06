@@ -15,6 +15,9 @@ const envSchema = z.object({
 	OPENAI_MODEL: z.string().default("gpt-5.2"),
 	TTS_MODEL: z.string().default("tts-1"),
 
+	// Auth
+	API_KEY: z.string().min(1).optional(),
+
 	// Server
 	PORT: z.coerce.number().default(3000),
 	NODE_ENV: z.enum(["development", "production", "test"]).default("development"),

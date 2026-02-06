@@ -4,6 +4,7 @@ import fastifySwaggerUi from "@fastify/swagger-ui";
 import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { env } from "./env.js";
+import { apiKeyPlugin } from "./plugins/api-key.js";
 import { newspaperRoutes } from "./routes/newspaper.js";
 import { slackRoutes } from "./routes/slack.js";
 import { tipsRoutes } from "./routes/tips.js";
@@ -60,6 +61,9 @@ app.addHook("preHandler", (request, _reply, done) => {
 	}
 	done();
 });
+
+// Auth
+await app.register(apiKeyPlugin);
 
 // Register routes
 app.register(newspaperRoutes);
