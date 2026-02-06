@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { FileTipsService } from "./file.js";
+import { FileTipsService } from "./FileTipService.js";
 
 const TEST_FILE = "data/tips-test.json";
 

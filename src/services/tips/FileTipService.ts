@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
-import type { IFileTipsService, Tip } from "./IFileTipsService.js";
+import type { IFileTipsService, Tip } from "./ITipsService.js";
 
 export class FileTipsService implements IFileTipsService {
 	private filePath: string;

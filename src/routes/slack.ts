@@ -3,6 +3,7 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { env } from "../env.js";
+import { createSlackRateLimitHandler } from "../plugins/rate-limit.js";
 import { getTipsService } from "./tips.js";
 
 // Verify Slack request signature
@@ -62,10 +63,10 @@ const SlackEventSchema = z.object({
 	challenge: z.string().optional(),
 	event: z
 		.object({
-			type: z.enum(["message", "app_mention"]),
+			type: z.string(), // Accept any event type - we filter for "message" in the handler
 			channel: z.string(),
-			user: z.string(),
-			text: z.string(),
+			user: z.string().optional(), // Some event types don't have user
+			text: z.string().optional(), // Some event types don't have text
 			ts: z.string(),
 			bot_id: z.string().optional(),
 		})
@@ -81,8 +82,10 @@ const SlackResponseSchema = z.union([
 export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 	const app = fastify.withTypeProvider<ZodTypeProvider>();
 	const service = getTipsService();
+	const rateLimitHandler = createSlackRateLimitHandler(fastify);
 
 	app.post("/slack/events", {
+		// preHandler: rateLimitHandler,
 		schema: {
 			tags: ["Slack"],
 			summary: "Slack Events API webhook",
@@ -91,6 +94,11 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 			response: {
 				200: SlackResponseSchema,
 				401: z.object({ error: z.string() }),
+				429: z.object({
+					statusCode: z.literal(429),
+					error: z.string(),
+					message: z.string(),
+				}),
 			},
 		},
 		handler: async (request, reply) => {
@@ -128,8 +136,8 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 				}
 
 				// Handle DMs (message.im events)
-				if (event.type === "message") {
-					console.log(`  📨 Received DM: "${event.text?.slice(0, 50)}..."`);
+				if (event.type === "message" && event.text) {
+					console.log(`  📨 Received DM: "${event.text.slice(0, 50)}..."`);
 
 					// Save the tip anonymously (we intentionally don't store event.user)
 					await service.saveTip(event.text);

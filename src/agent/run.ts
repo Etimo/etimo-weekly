@@ -3,7 +3,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { generatePdf } from "../pdf.js";
 import { LLMServiceFactory } from "../services/llm/LLMServiceFactory.js";
 import { SlackServiceFactory } from "../services/slack/SlackServiceFactory.js";
-import { FileTipsService } from "../services/tips/file.js";
+import { FileTipsService } from "../services/tips/FileTipService.js";
 import { TTSServiceFactory } from "../services/tts/TTSServiceFactory.js";
 import { renderNewspaper } from "../templates/render.js";
 import { runAgent } from "./index.js";

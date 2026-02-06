@@ -10,7 +10,7 @@ import { EditionStore } from "../persistence/edition-store.js";
 import type { NewspaperEdition, PreviousCrosswordSolution } from "../schemas/article.js";
 import type { ILLMService } from "../services/llm/ILLMService.js";
 import type { ISlackService } from "../services/slack/ISlackService.js";
-import type { IFileTipsService, Tip } from "../services/tips/IFileTipsService.js";
+import type { IFileTipsService, Tip } from "../services/tips/ITipsService.js";
 import type { ITTSService } from "../services/tts/ITTSService.js";
 import { getReporterForSection, RECURRING_COLUMNS, type Reporter } from "./reporters.js";
 
@@ -655,7 +655,9 @@ async function generateCrosswordStep(state: AgentState, deps: AgentDependencies)
 		topics: state.articles.flatMap((a) => a.tags),
 	};
 
-	console.log(`  📝 Context: ${context.headlines.length} headlines, ${context.people.length} people`);
+	console.log(
+		`  📝 Context: ${context.headlines.length} headlines, ${context.people.length} people`,
+	);
 
 	try {
 		const { output: crosswordContent } = await deps.llm.generateStructured({
@@ -689,7 +691,9 @@ Requirements:
 				clue: w.clue,
 			}));
 
-			console.log(`  🔤 Generated ${cleanedWords.length} words: ${cleanedWords.map((w) => w.word).join(", ")}`);
+			console.log(
+				`  🔤 Generated ${cleanedWords.length} words: ${cleanedWords.map((w) => w.word).join(", ")}`,
+			);
 
 			const grid = generateCrosswordGrid(cleanedWords);
 
@@ -770,4 +774,3 @@ Write in Swedish.`,
 	console.log("  ✅ Edition complete!");
 	console.log(`  📝 Editor's note: ${editorNote}`);
 }
-

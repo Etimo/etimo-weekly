@@ -122,5 +122,70 @@ describe("Slack API", () => {
 			const body = response.json();
 			expect(body.ok).toBe(true);
 		});
+
+		it("should rate limit users after too many tips", async () => {
+			const userId = `rate-limit-test-${Date.now()}`;
+
+			// Send 5 tips (the limit)
+			for (let i = 0; i < 5; i++) {
+				const response = await app.inject({
+					method: "POST",
+					url: "/slack/events",
+					payload: {
+						type: "event_callback",
+						event: {
+							type: "message",
+							channel: "D123456",
+							user: userId,
+							text: `Tip number ${i + 1}`,
+							ts: `123456789${i}.123456`,
+						},
+					},
+				});
+				expect(response.statusCode).toBe(200);
+			}
+
+			// The 6th tip should be rate limited
+			const response = await app.inject({
+				method: "POST",
+				url: "/slack/events",
+				payload: {
+					type: "event_callback",
+					event: {
+						type: "message",
+						channel: "D123456",
+						user: userId,
+						text: "This tip should be rate limited",
+						ts: "1234567899.123456",
+					},
+				},
+			});
+
+			expect(response.statusCode).toBe(429);
+			const body = response.json();
+			expect(body.error).toBe("Too Many Requests");
+		});
+
+		it("should not rate limit different users", async () => {
+			// Two different users should each get their own rate limit
+			for (let userNum = 0; userNum < 2; userNum++) {
+				const userId = `independent-user-${userNum}-${Date.now()}`;
+				const response = await app.inject({
+					method: "POST",
+					url: "/slack/events",
+					payload: {
+						type: "event_callback",
+						event: {
+							type: "message",
+							channel: "D123456",
+							user: userId,
+							text: "First tip from this user",
+							ts: `12345678${userNum}0.123456`,
+						},
+					},
+				});
+				expect(response.statusCode).toBe(200);
+			}
+		});
 	});
 });
