@@ -18,14 +18,8 @@ function verifySlackSignature(
 		return "Request timestamp too old";
 	}
 
-	console.log("  Verifying Slack signature with signing secret:", signingSecret);
-
 	const sigBasestring = `v0:${timestamp}:${body}`;
-	console.log("  Signature base string:", sigBasestring);
-
 	const mySignature = `v0=${createHmac("sha256", signingSecret).update(sigBasestring).digest("hex")}`;
-
-	console.log("  Computed signature:", mySignature);
 
 	try {
 		if (!timingSafeEqual(Buffer.from(mySignature), Buffer.from(signature))) {
@@ -124,18 +118,6 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 				console.log("  ⚠️ Missing Slack signature headers or body");
 				return reply.status(401).send({ error: "Missing signature" });
 			}
-
-			// debug logs:
-
-			console.log(
-				`🔔 Slack event received: type=${body.type}, event_type=${body.event?.type}, text="${body.event?.text?.slice(0, 50)}..."`,
-			);
-			console.log("  Headers:", {
-				signature: signature ? `signature` : "missing",
-				timestamp,
-			});
-
-			console.log("env.SLACK_SIGNING_SECRET:", env.SLACK_SIGNING_SECRET);
 
 			const signatureError = verifySlackSignature(
 				env.SLACK_SIGNING_SECRET,
