@@ -44,22 +44,15 @@ await app.register(fastifySwaggerUi, {
 	routePrefix: "/docs",
 });
 
-// Store raw body for Slack signature verification
-app.addContentTypeParser("application/json", { parseAs: "string" }, (_req, body, done) => {
+// Custom JSON parser that preserves the raw body for Slack signature verification
+app.addContentTypeParser("application/json", { parseAs: "string" }, (req, body, done) => {
 	try {
+		req.rawBody = body as string;
 		const json = JSON.parse(body as string);
 		done(null, json);
 	} catch (err) {
 		done(err as Error, undefined);
 	}
-});
-
-app.addHook("preHandler", (request, _reply, done) => {
-	// Store raw body for signature verification
-	if (request.headers["content-type"]?.includes("application/json")) {
-		request.rawBody = JSON.stringify(request.body);
-	}
-	done();
 });
 
 // Auth
