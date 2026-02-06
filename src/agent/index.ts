@@ -20,6 +20,7 @@ type SlackData = {
 		channel?: string;
 		reactions?: Array<{ emoji?: string; count?: number; users?: string[] }>;
 		replies?: Array<{ user: string; text: string }>;
+		isTip?: boolean;
 	}>;
 	users: Map<string, string>;
 };
@@ -284,6 +285,22 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions.`,
 		return;
 	}
 
+	// Fetch DMs (Tips)
+	console.log("  🕵️ Fetching anonymous tips (DMs)...");
+	const dms = await deps.slack.listDirectMessageChannels(20);
+	if (dms.length > 0) {
+		console.log(`    Found ${dms.length} DM conversations`);
+		for (const dm of dms) {
+			const history = await deps.slack.getChannelHistory(dm.id, 10, twoYearsAgo);
+			if (history.length > 0) {
+				console.log(`    📩 Got ${history.length} tips from DM ${dm.id}`);
+				state.slackData.messages.push(
+					...history.map((m) => ({ ...m, isTip: true, channel: "DM" })),
+				);
+			}
+		}
+	}
+
 	// Resolve all user IDs mentioned in messages
 	console.log("  👥 Resolving user IDs...");
 	const allUserIds = new Set<string>();
@@ -378,7 +395,18 @@ async function analyzeStep(state: AgentState, deps: AgentDependencies): Promise<
 		prompt: `Analyze these Slack messages and determine what newspaper sections we should write.
 
 Gathered data:
-${JSON.stringify(state.slackData.messages, null, 2)}
+${JSON.stringify(
+			state.slackData.messages.filter((m) => !m.isTip),
+			null,
+			2,
+		)}
+
+INCOMING TIPS (Private Messages - Use these specifically for GOSSIP):
+${JSON.stringify(
+			state.slackData.messages.filter((m) => m.isTip),
+			null,
+			2,
+		)}
 
 Based on the ACTUAL content found, create appropriate sections. Don't use generic categories -
 create sections that reflect what's really in the messages. For example:
@@ -428,6 +456,13 @@ async function generateArticlesStep(state: AgentState, deps: AgentDependencies):
 
 	for (const section of state.analyzedSections) {
 		console.log(`  📝 Generating ${section.label} article...`);
+		if (section.sourceMessages.length > 0) {
+			console.log("    💡 Tips used:");
+			for (const msg of section.sourceMessages) {
+				const preview = msg.replace(/\n/g, " ").slice(0, 100);
+				console.log(`      - "${preview}${preview.length < msg.length ? "..." : ""}"`);
+			}
+		}
 		try {
 			const { output: article } = await deps.llm.generateStructured({
 				schema: ArticleGenerationSchema,
@@ -452,7 +487,8 @@ Mention who reacted to the messages if relevant (e.g. "Björn reagerade med 🔥
 End with a short, punchy signoff (e.g. "/- Redaktionen" or "/- Sven").
 ${section.id === "headline" ? "This is the MAIN HEADLINE - make it big and dramatic!" : ""}
 ${section.id === "gossip" ? "This is the gossip column - be mysterious and playful, hint at secrets and office intrigue!" : ""}
-Reference real people by name from the data. Use their actual names, not IDs.`,
+Reference real people by name from the data. Use their actual names, not IDs.
+${section.id === "gossip" ? "IMPORTANT: Prioritize the 'INCOMING TIPS'/DMs for this section if available." : ""}`,
 			});
 
 			if (article) {

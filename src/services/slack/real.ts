@@ -30,6 +30,26 @@ export class RealSlackService implements ISlackService {
 		}
 	}
 
+	async listDirectMessageChannels(limit = 100): Promise<SlackChannel[]> {
+		try {
+			const result = await this.client.users.conversations({
+				types: "im",
+				limit,
+			});
+			return (
+				result.channels?.map((c) => ({
+					id: c.id ?? "",
+					name: "Direct Message",
+					topic: "Private conversation",
+					isIM: true,
+				})) ?? []
+			);
+		} catch (error) {
+			console.error("    [Slack] Error listing DMs:", error);
+			return [];
+		}
+	}
+
 	async getChannelHistory(channelId: string, limit = 50, oldest?: string): Promise<SlackMessage[]> {
 		try {
 			console.log(`    [Slack] Fetching history for channel ${channelId}...`);
