@@ -32,6 +32,16 @@ await app.register(fastifySwagger, {
 			description: "API for the Etimo Weekly newspaper generator",
 			version: "1.0.0",
 		},
+		components: {
+			securitySchemes: {
+				apiKey: {
+					type: "apiKey",
+					name: "x-api-key",
+					in: "header",
+				},
+			},
+		},
+		security: [{ apiKey: [] }],
 		tags: [
 			{ name: "Newspaper", description: "Newspaper endpoints" },
 			{ name: "Slack", description: "Slack integration endpoints" },
