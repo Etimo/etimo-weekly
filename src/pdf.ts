@@ -28,10 +28,10 @@ export async function generatePdf(
 
 	try {
 		const page = await browser.newPage();
+		page.setDefaultTimeout(120_000);
 
 		await page.setContent(html, {
 			waitUntil: "networkidle2",
-			timeout: 120_000,
 		});
 
 		await page.pdf({
@@ -63,10 +63,10 @@ export async function generatePdfFromHtml(
 
 	try {
 		const page = await browser.newPage();
+		page.setDefaultTimeout(120_000);
 
 		await page.setContent(html, {
 			waitUntil: "networkidle2",
-			timeout: 120_000,
 		});
 
 		await page.pdf({
