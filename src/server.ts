@@ -7,7 +7,6 @@ import { env } from "./env.js";
 import { apiKeyPlugin } from "./plugins/api-key.js";
 import { newspaperRoutes } from "./routes/newspaper.js";
 import { slackRoutes } from "./routes/slack.js";
-import { tipsRoutes } from "./routes/tips.js";
 
 // Extend Fastify request type to include rawBody for Slack signature verification
 declare module "fastify" {
@@ -35,8 +34,7 @@ await app.register(fastifySwagger, {
 		tags: [
 			{ name: "Newspaper", description: "Newspaper endpoints" },
 			{ name: "Slack", description: "Slack integration endpoints" },
-			{ name: "Tips", description: "Anonymous tip endpoints (dev only)" },
-		],
+			],
 	},
 });
 
@@ -68,7 +66,6 @@ await app.register(apiKeyPlugin);
 // Register routes
 app.register(newspaperRoutes);
 app.register(slackRoutes);
-app.register(tipsRoutes);
 
 async function start() {
 	try {
@@ -76,10 +73,6 @@ async function start() {
 		console.log(`📰 Etimo Weekly is running at http://localhost:${env.PORT}`);
 		console.log(`   📚 API docs at http://localhost:${env.PORT}/docs`);
 		console.log(`   POST /slack/events - Slack Events API webhook`);
-		if (env.NODE_ENV !== "production") {
-			console.log(`   POST /test/tip     - Test tip submission`);
-			console.log(`   GET  /test/tips    - View pending tips`);
-		}
 	} catch (err) {
 		app.log.error(err);
 		process.exit(1);
