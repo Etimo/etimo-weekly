@@ -104,20 +104,21 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 		handler: async (request, reply) => {
 			const { body, rawBody } = request;
 
-			// Verify signature if we have a signing secret
-			if (env.SLACK_SIGNING_SECRET) {
-				const signature = request.headers["x-slack-signature"] as string;
-				const timestamp = request.headers["x-slack-request-timestamp"] as string;
+			if (!env.SLACK_SIGNING_SECRET) {
+				return reply.status(401).send({ error: "SLACK_SIGNING_SECRET not configured" });
+			}
 
-				if (!signature || !timestamp || !rawBody) {
-					console.log("  ⚠️ Missing Slack signature headers or body");
-					return reply.status(401).send({ error: "Missing signature" });
-				}
+			const signature = request.headers["x-slack-signature"] as string;
+			const timestamp = request.headers["x-slack-request-timestamp"] as string;
 
-				if (!verifySlackSignature(env.SLACK_SIGNING_SECRET, signature, timestamp, rawBody)) {
-					console.log("  ⚠️ Invalid Slack signature");
-					return reply.status(401).send({ error: "Invalid signature" });
-				}
+			if (!signature || !timestamp || !rawBody) {
+				console.log("  ⚠️ Missing Slack signature headers or body");
+				return reply.status(401).send({ error: "Missing signature" });
+			}
+
+			if (!verifySlackSignature(env.SLACK_SIGNING_SECRET, signature, timestamp, rawBody)) {
+				console.log("  ⚠️ Invalid Slack signature");
+				return reply.status(401).send({ error: "Invalid signature" });
 			}
 
 			// Handle URL verification challenge (Slack sends this when setting up)

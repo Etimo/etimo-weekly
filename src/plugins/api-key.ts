@@ -9,6 +9,10 @@ export const apiKeyPlugin = fp(async (fastify: FastifyInstance): Promise<void> =
 	}
 
 	fastify.addHook("onRequest", async (request: FastifyRequest, reply: FastifyReply) => {
+		if (request.url.startsWith("/slack/")) {
+			return;
+		}
+
 		const key = request.headers["x-api-key"];
 		if (key !== env.API_KEY) {
 			return reply.status(401).send({ error: "Invalid or missing API key" });
