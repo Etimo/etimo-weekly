@@ -130,7 +130,8 @@ function findBestPlacement(
 			for (let j = 0; j < existingWord.length; j++) {
 				if (word[i] === existingWord[j]) {
 					// Calculate position for intersection
-					let row: number, col: number;
+					let row: number;
+					let col: number;
 
 					if (placement.direction === "across") {
 						// Existing word is across, new word goes down
@@ -210,9 +211,17 @@ function isValidPlacement(
 	if (direction === "down" && row > 0 && cells[row - 1][col] !== null) return false;
 
 	// Check cell after word end
-	if (direction === "across" && col + word.length < maxGridSize && cells[row][col + word.length] !== null)
+	if (
+		direction === "across" &&
+		col + word.length < maxGridSize &&
+		cells[row][col + word.length] !== null
+	)
 		return false;
-	if (direction === "down" && row + word.length < maxGridSize && cells[row + word.length][col] !== null)
+	if (
+		direction === "down" &&
+		row + word.length < maxGridSize &&
+		cells[row + word.length][col] !== null
+	)
 		return false;
 
 	return true;
@@ -247,10 +256,10 @@ function trimGrid(cells: (string | null)[][]): {
 	width: number;
 	height: number;
 } {
-	let minRow = cells.length,
-		maxRow = 0;
-	let minCol = cells[0].length,
-		maxCol = 0;
+	let minRow = cells.length;
+	let maxRow = 0;
+	let minCol = cells[0].length;
+	let maxCol = 0;
 
 	for (let r = 0; r < cells.length; r++) {
 		for (let c = 0; c < cells[r].length; c++) {
@@ -290,7 +299,7 @@ function renumberPlacements(placements: WordPlacement[]): WordPlacement[] {
 		if (!positionMap.has(posKey)) {
 			positionMap.set(posKey, currentNumber++);
 		}
-		return { ...p, number: positionMap.get(posKey)! };
+		return { ...p, number: positionMap.get(posKey) ?? 0 };
 	});
 }
 

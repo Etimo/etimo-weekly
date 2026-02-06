@@ -119,8 +119,12 @@ function renderCrossword(puzzle: CrosswordPuzzle): string {
 	gridHtml += "</div>";
 
 	// Build clues HTML
-	const acrossHtml = acrossClues.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`).join("");
-	const downHtml = downClues.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`).join("");
+	const acrossHtml = acrossClues
+		.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`)
+		.join("");
+	const downHtml = downClues
+		.map((c) => `<li><strong>${c.number}.</strong> ${c.clue}</li>`)
+		.join("");
 
 	return `
 		<div class="crossword">
@@ -159,7 +163,8 @@ export function renderNewspaper(edition: NewspaperEdition): string {
 
 	// Calculate total pages: front page + interior pages + crossword page (if present)
 	const hasCrossword = !!edition.crossword;
-	const totalPages = 1 + Math.max(1, Math.ceil(interiorArticles.length / 2)) + (hasCrossword ? 1 : 0);
+	const totalPages =
+		1 + Math.max(1, Math.ceil(interiorArticles.length / 2)) + (hasCrossword ? 1 : 0);
 
 	return `<!DOCTYPE html>
 <html lang="sv">

@@ -2,9 +2,9 @@ import { tool } from "ai";
 import { z } from "zod";
 import {
 	CrosswordContentSchema,
+	type CrosswordPuzzle,
 	createPuzzle,
 	generateCrosswordGrid,
-	type CrosswordPuzzle,
 } from "../crossword/index.js";
 import { FileEditionRepository } from "../repositories/FileEditionRepository.js";
 import { crosswordToPersisted } from "../repositories/IEditionRepository.js";
@@ -13,7 +13,7 @@ import type { NewspaperEdition, PreviousCrosswordSolution } from "../schemas/art
 import type { ILLMService } from "../services/llm/ILLMService.js";
 import type { ISlackService } from "../services/slack/ISlackService.js";
 import type { ITTSService } from "../services/tts/ITTSService.js";
-import { getReporterForSection, RECURRING_COLUMNS, type Reporter } from "./reporters.js";
+import { RECURRING_COLUMNS, type Reporter, getReporterForSection } from "./reporters.js";
 
 function getSystemPrompt(reporter: Reporter): string {
 	return `${reporter.systemPrompt}

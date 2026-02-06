@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
-import { generateCrosswordGrid, createPuzzle } from "./generator.js";
+import { describe, expect, it } from "vitest";
+import { createPuzzle, generateCrosswordGrid } from "./generator.js";
 
 describe("generateCrosswordGrid", () => {
 	it("should return null for empty word list", () => {
@@ -12,9 +12,10 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
-		expect(grid!.placements).toHaveLength(1);
-		expect(grid!.placements[0].word).toBe("ETIMO");
-		expect(grid!.placements[0].direction).toBe("across");
+		if (!grid) return;
+		expect(grid.placements).toHaveLength(1);
+		expect(grid.placements[0].word).toBe("ETIMO");
+		expect(grid.placements[0].direction).toBe("across");
 	});
 
 	it("should create interlocking words when possible", () => {
@@ -25,8 +26,9 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
+		if (!grid) return;
 		// Both words share letter 'E' or 'T', so they should interlock
-		expect(grid!.placements.length).toBeGreaterThanOrEqual(1);
+		expect(grid.placements.length).toBeGreaterThanOrEqual(1);
 	});
 
 	it("should place multiple intersecting words", () => {
@@ -38,7 +40,8 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
-		expect(grid!.placements.length).toBeGreaterThanOrEqual(2);
+		if (!grid) return;
+		expect(grid.placements.length).toBeGreaterThanOrEqual(2);
 	});
 
 	it("should assign correct numbers to placements", () => {
@@ -49,8 +52,9 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
+		if (!grid) return;
 		// Numbers should be positive integers
-		for (const placement of grid!.placements) {
+		for (const placement of grid.placements) {
 			expect(placement.number).toBeGreaterThan(0);
 		}
 	});
@@ -63,10 +67,11 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
-		expect(grid!.width).toBeGreaterThan(0);
-		expect(grid!.height).toBeGreaterThan(0);
-		expect(grid!.cells.length).toBe(grid!.height);
-		expect(grid!.cells[0].length).toBe(grid!.width);
+		if (!grid) return;
+		expect(grid.width).toBeGreaterThan(0);
+		expect(grid.height).toBeGreaterThan(0);
+		expect(grid.cells.length).toBe(grid.height);
+		expect(grid.cells[0].length).toBe(grid.width);
 	});
 
 	it("should place letters correctly in grid cells", () => {
@@ -74,13 +79,14 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
-		const placement = grid!.placements[0];
+		if (!grid) return;
+		const placement = grid.placements[0];
 
 		// Check that the word is in the grid
 		for (let i = 0; i < placement.word.length; i++) {
 			const row = placement.direction === "across" ? placement.row : placement.row + i;
 			const col = placement.direction === "across" ? placement.col + i : placement.col;
-			expect(grid!.cells[row][col]).toBe(placement.word[i].toUpperCase());
+			expect(grid.cells[row][col]).toBe(placement.word[i].toUpperCase());
 		}
 	});
 
@@ -92,7 +98,8 @@ describe("generateCrosswordGrid", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
-		expect(grid!.placements.length).toBeGreaterThanOrEqual(1);
+		if (!grid) return;
+		expect(grid.placements.length).toBeGreaterThanOrEqual(1);
 	});
 
 	it("should not place words that exceed grid bounds", () => {
@@ -115,8 +122,9 @@ describe("createPuzzle", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
+		if (!grid) return;
 
-		const puzzle = createPuzzle(grid!, "Test Puzzle");
+		const puzzle = createPuzzle(grid, "Test Puzzle");
 
 		expect(puzzle.title).toBe("Test Puzzle");
 		expect(puzzle.grid).toBe(grid);
@@ -133,12 +141,13 @@ describe("createPuzzle", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
+		if (!grid) return;
 
-		const puzzle = createPuzzle(grid!, "Test");
+		const puzzle = createPuzzle(grid, "Test");
 
 		// Total clues should match placed words
 		const totalClues = puzzle.acrossClues.length + puzzle.downClues.length;
-		expect(totalClues).toBe(grid!.placements.length);
+		expect(totalClues).toBe(grid.placements.length);
 
 		// Each clue should have a number and clue text
 		for (const clue of [...puzzle.acrossClues, ...puzzle.downClues]) {
@@ -156,8 +165,9 @@ describe("createPuzzle", () => {
 		const grid = generateCrosswordGrid(words);
 
 		expect(grid).not.toBeNull();
+		if (!grid) return;
 
-		const puzzle = createPuzzle(grid!, "Test");
+		const puzzle = createPuzzle(grid, "Test");
 
 		// Verify across clues are sorted
 		for (let i = 1; i < puzzle.acrossClues.length; i++) {

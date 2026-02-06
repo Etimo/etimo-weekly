@@ -23,6 +23,7 @@ export async function generatePdf(
 	const browser = await puppeteer.launch({
 		headless: true,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+		executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
 	});
 
 	try {
@@ -56,6 +57,7 @@ export async function generatePdfFromHtml(
 	const browser = await puppeteer.launch({
 		headless: true,
 		args: ["--no-sandbox", "--disable-setuid-sandbox"],
+		executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
 	});
 
 	try {

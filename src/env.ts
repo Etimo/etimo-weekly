@@ -15,6 +15,9 @@ const envSchema = z.object({
 	OPENAI_MODEL: z.string().default("gpt-5.2"),
 	TTS_MODEL: z.string().default("tts-1"),
 
+	// Slack publishing
+	SLACK_PUBLISH_CHANNEL: z.string().min(1).optional(),
+
 	// Auth
 	API_KEY: z.string().min(1).optional(),
 

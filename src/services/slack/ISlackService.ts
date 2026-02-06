@@ -10,4 +10,11 @@ export interface ISlackService {
 	searchMessages(query: string, count?: number): Promise<SlackSearchResult[]>;
 	getThreadReplies(channelId: string, ts: string): Promise<Array<{ user: string; text: string }>>;
 	getCustomEmojis(): Promise<CustomEmojiMap>;
+	uploadFile(options: {
+		channelId: string;
+		filePath: string;
+		filename: string;
+		title?: string;
+		initialComment?: string;
+	}): Promise<{ ok: boolean }>;
 }

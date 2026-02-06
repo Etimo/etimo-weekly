@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import type { IEditionRepository, PersistedEdition } from "./IEditionRepository.js";
 
@@ -62,7 +62,9 @@ export class FileEditionRepository implements IEditionRepository {
 		}
 		this.data.editions.push(edition);
 		this.save();
-		console.log(`  💾 Saved edition #${edition.editionNumber} to store (${this.data.editions.length} total)`);
+		console.log(
+			`  💾 Saved edition #${edition.editionNumber} to store (${this.data.editions.length} total)`,
+		);
 	}
 
 	getAllEditions(): PersistedEdition[] {

@@ -5,6 +5,7 @@ import Fastify from "fastify";
 import { serializerCompiler, validatorCompiler } from "fastify-type-provider-zod";
 import { env } from "./env.js";
 import { apiKeyPlugin } from "./plugins/api-key.js";
+import { generateRoutes } from "./routes/generate.js";
 import { newspaperRoutes } from "./routes/newspaper.js";
 import { slackRoutes } from "./routes/slack.js";
 
@@ -34,7 +35,8 @@ await app.register(fastifySwagger, {
 		tags: [
 			{ name: "Newspaper", description: "Newspaper endpoints" },
 			{ name: "Slack", description: "Slack integration endpoints" },
-			],
+			{ name: "Generate", description: "Newspaper generation job endpoints" },
+		],
 	},
 });
 
@@ -66,6 +68,7 @@ await app.register(apiKeyPlugin);
 // Register routes
 app.register(newspaperRoutes);
 app.register(slackRoutes);
+app.register(generateRoutes);
 
 async function start() {
 	try {

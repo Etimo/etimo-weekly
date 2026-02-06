@@ -153,6 +153,17 @@ export class MockSlackService implements ISlackService {
 		return MOCK_THREAD_REPLIES[ts] ?? [];
 	}
 
+	async uploadFile(options: {
+		channelId: string;
+		filePath: string;
+		filename: string;
+		title?: string;
+		initialComment?: string;
+	}): Promise<{ ok: boolean }> {
+		console.log(`    [Mock Slack] Would upload ${options.filename} to ${options.channelId}`);
+		return { ok: true };
+	}
+
 	async getCustomEmojis(): Promise<CustomEmojiMap> {
 		console.log("    [Mock Slack] Returning mock custom emojis");
 		return {

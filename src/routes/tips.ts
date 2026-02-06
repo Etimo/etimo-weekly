@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import type { ZodTypeProvider } from "fastify-type-provider-zod";
 import { z } from "zod";
 import { env } from "../env.js";
-import type { ITipsRepository } from "../repositories/ITipsRepository.js";
 import { FileTipsRepository } from "../repositories/FileTipsRepository.js";
+import type { ITipsRepository } from "../repositories/ITipsRepository.js";
 
 const TipSchema = z.object({
 	id: z.string(),

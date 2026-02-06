@@ -96,7 +96,9 @@ export class RealSlackService implements ISlackService {
 		} catch (error: unknown) {
 			const err = error as { data?: { error?: string } };
 			if (err.data?.error === "not_allowed_token_type") {
-				console.warn("    [Slack] search.messages requires a user token (xoxp-...), skipping search");
+				console.warn(
+					"    [Slack] search.messages requires a user token (xoxp-...), skipping search",
+				);
 			} else {
 				console.error("    [Slack] Error searching:", err.data?.error ?? error);
 			}
@@ -124,6 +126,32 @@ export class RealSlackService implements ISlackService {
 			const err = error as { data?: { error?: string } };
 			console.error(`    [Slack] Error fetching thread ${ts}:`, err.data?.error ?? error);
 			return [];
+		}
+	}
+
+	async uploadFile(options: {
+		channelId: string;
+		filePath: string;
+		filename: string;
+		title?: string;
+		initialComment?: string;
+	}): Promise<{ ok: boolean }> {
+		try {
+			const { createReadStream } = await import("node:fs");
+			console.log(`    [Slack] Uploading file ${options.filename} to ${options.channelId}...`);
+			await this.client.files.uploadV2({
+				channel_id: options.channelId,
+				file: createReadStream(options.filePath),
+				filename: options.filename,
+				title: options.title ?? options.filename,
+				initial_comment: options.initialComment,
+			});
+			console.log("    [Slack] File uploaded successfully");
+			return { ok: true };
+		} catch (error: unknown) {
+			const err = error as { data?: { error?: string } };
+			console.error("    [Slack] Error uploading file:", err.data?.error ?? error);
+			return { ok: false };
 		}
 	}
 

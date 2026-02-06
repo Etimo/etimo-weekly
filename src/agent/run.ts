@@ -1,9 +1,9 @@
 import "dotenv/config";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { generatePdf } from "../pdf.js";
+import { FileTipsRepository } from "../repositories/FileTipsRepository.js";
 import { LLMServiceFactory } from "../services/llm/LLMServiceFactory.js";
 import { SlackServiceFactory } from "../services/slack/SlackServiceFactory.js";
-import { FileTipsRepository } from "../repositories/FileTipsRepository.js";
 import { TTSServiceFactory } from "../services/tts/TTSServiceFactory.js";
 import { renderNewspaper } from "../templates/render.js";
 import { setCustomEmojis } from "../utils/emoji.js";

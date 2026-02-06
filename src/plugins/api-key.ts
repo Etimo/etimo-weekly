@@ -1,7 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import fp from "fastify-plugin";
 import { env } from "../env.js";
 
-export async function apiKeyPlugin(fastify: FastifyInstance): Promise<void> {
+export const apiKeyPlugin = fp(async (fastify: FastifyInstance): Promise<void> => {
 	if (!env.API_KEY) {
 		fastify.log.warn("API_KEY not set — all routes are unprotected");
 		return;
@@ -13,4 +14,4 @@ export async function apiKeyPlugin(fastify: FastifyInstance): Promise<void> {
 			return reply.status(401).send({ error: "Invalid or missing API key" });
 		}
 	});
-}
+});
