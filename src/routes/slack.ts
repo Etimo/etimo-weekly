@@ -6,25 +6,28 @@ import { env } from "../env.js";
 import { createSlackRateLimitHandler } from "../plugins/rate-limit.js";
 import { getTipsService } from "./tips.js";
 
-// Verify Slack request signature
+// Verify Slack request signature — returns null if valid, or an error reason string
 function verifySlackSignature(
 	signingSecret: string,
 	signature: string,
 	timestamp: string,
 	body: string,
-): boolean {
+): string | null {
 	const fiveMinutesAgo = Math.floor(Date.now() / 1000) - 60 * 5;
 	if (Number.parseInt(timestamp, 10) < fiveMinutesAgo) {
-		return false; // Request too old
+		return "Request timestamp too old";
 	}
 
 	const sigBasestring = `v0:${timestamp}:${body}`;
 	const mySignature = `v0=${createHmac("sha256", signingSecret).update(sigBasestring).digest("hex")}`;
 
 	try {
-		return timingSafeEqual(Buffer.from(mySignature), Buffer.from(signature));
+		if (!timingSafeEqual(Buffer.from(mySignature), Buffer.from(signature))) {
+			return "Signature mismatch";
+		}
+		return null;
 	} catch {
-		return false;
+		return "Signature comparison failed";
 	}
 }
 
@@ -116,9 +119,10 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 				return reply.status(401).send({ error: "Missing signature" });
 			}
 
-			if (!verifySlackSignature(env.SLACK_SIGNING_SECRET, signature, timestamp, rawBody)) {
-				console.log("  ⚠️ Invalid Slack signature");
-				return reply.status(401).send({ error: "Invalid signature" });
+			const signatureError = verifySlackSignature(env.SLACK_SIGNING_SECRET, signature, timestamp, rawBody);
+			if (signatureError) {
+				console.log(`  ⚠️ Invalid Slack signature: ${signatureError}`);
+				return reply.status(401).send({ error: `Invalid signature: ${signatureError}` });
 			}
 
 			// Handle URL verification challenge (Slack sends this when setting up)
