@@ -73,6 +73,9 @@ async function runGenerationJob(jobId: string): Promise<void> {
 		await generatePdf(edition, pdfPath);
 
 		let publishedToSlack = false;
+		if (job.options.publishToSlack && !env.SLACK_PUBLISH_CHANNEL) {
+			console.warn("publishToSlack is enabled but SLACK_PUBLISH_CHANNEL is not set, skipping upload");
+		}
 		if (job.options.publishToSlack && env.SLACK_PUBLISH_CHANNEL) {
 			const result = await slack.uploadFile({
 				channelId: env.SLACK_PUBLISH_CHANNEL,
