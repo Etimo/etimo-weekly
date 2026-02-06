@@ -95,7 +95,11 @@ export class RealSlackService implements ISlackService {
 			);
 		} catch (error: unknown) {
 			const err = error as { data?: { error?: string } };
-			console.error("    [Slack] Error searching:", err.data?.error ?? error);
+			if (err.data?.error === "not_allowed_token_type") {
+				console.warn("    [Slack] search.messages requires a user token (xoxp-...), skipping search");
+			} else {
+				console.error("    [Slack] Error searching:", err.data?.error ?? error);
+			}
 			return [];
 		}
 	}
