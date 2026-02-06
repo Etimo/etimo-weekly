@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import fp from "fastify-plugin";
 import { env } from "../env.js";
 
-const nonProtectedPrefixes = ["/slack/", "/docs/"];
+const nonProtectedPrefixes = ["/slack/", "/docs"];
 
 export const apiKeyPlugin = fp(async (fastify: FastifyInstance): Promise<void> => {
 	if (!env.API_KEY) {
