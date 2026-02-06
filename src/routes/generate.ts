@@ -12,10 +12,38 @@ import { SlackServiceFactory } from "../services/slack/SlackServiceFactory.js";
 import { TTSServiceFactory } from "../services/tts/TTSServiceFactory.js";
 import { setCustomEmojis } from "../utils/emoji.js";
 
+const GenerateBodyExample = {
+	includeAudio: false,
+	publishToSlack: true,
+};
+
 const GenerateBodySchema = z.object({
 	includeAudio: z.boolean().optional().default(false),
 	publishToSlack: z.boolean().optional().default(true),
 });
+
+const JobStatusRunningExample = {
+	id: "024d6350-7ce6-423a-a225-7d2f84a45d5a",
+	status: "running",
+	createdAt: "2026-02-06T13:04:59.139Z",
+	startedAt: "2026-02-06T13:04:59.139Z",
+	options: { includeAudio: false, publishToSlack: true },
+};
+
+const JobStatusCompletedExample = {
+	id: "024d6350-7ce6-423a-a225-7d2f84a45d5a",
+	status: "completed",
+	createdAt: "2026-02-06T13:04:59.139Z",
+	startedAt: "2026-02-06T13:04:59.139Z",
+	completedAt: "2026-02-06T13:06:12.451Z",
+	options: { includeAudio: false, publishToSlack: true },
+	result: {
+		editionNumber: 42,
+		articleCount: 5,
+		pdfFilename: "etimo-veckoblad-42.pdf",
+		publishedToSlack: true,
+	},
+};
 
 const JobStatusSchema = z.object({
 	id: z.string(),
@@ -116,8 +144,35 @@ export async function generateRoutes(fastify: FastifyInstance): Promise<void> {
 			description: "Kicks off agent + PDF generation as a background job",
 			body: GenerateBodySchema,
 			response: {
-				202: JobStatusSchema,
-				409: z.object({ error: z.string() }),
+				202: JobStatusSchema.describe("Job accepted and started"),
+				409: z.object({ error: z.string() }).describe("A job is already running"),
+			},
+			openapi: {
+				requestBody: {
+					content: {
+						"application/json": {
+							example: GenerateBodyExample,
+						},
+					},
+				},
+				responses: {
+					"202": {
+						content: {
+							"application/json": {
+								examples: {
+									running: { summary: "Job just started", value: JobStatusRunningExample },
+								},
+							},
+						},
+					},
+					"409": {
+						content: {
+							"application/json": {
+								example: { error: "A generation job is already running" },
+							},
+						},
+					},
+				},
 			},
 		},
 		handler: async (request, reply) => {
@@ -143,8 +198,29 @@ export async function generateRoutes(fastify: FastifyInstance): Promise<void> {
 			description: "Returns the current status of a generation job",
 			params: JobParamsSchema,
 			response: {
-				200: JobStatusSchema,
-				404: z.object({ error: z.string() }),
+				200: JobStatusSchema.describe("Current job status"),
+				404: z.object({ error: z.string() }).describe("Job not found"),
+			},
+			openapi: {
+				responses: {
+					"200": {
+						content: {
+							"application/json": {
+								examples: {
+									running: { summary: "Job in progress", value: JobStatusRunningExample },
+									completed: { summary: "Job completed", value: JobStatusCompletedExample },
+								},
+							},
+						},
+					},
+					"404": {
+						content: {
+							"application/json": {
+								example: { error: "Job not found" },
+							},
+						},
+					},
+				},
 			},
 		},
 		handler: async (request, reply) => {

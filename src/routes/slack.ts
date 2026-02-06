@@ -103,6 +103,68 @@ export async function slackRoutes(fastify: FastifyInstance): Promise<void> {
 					message: z.string(),
 				}),
 			},
+			openapi: {
+				requestBody: {
+					content: {
+						"application/json": {
+							examples: {
+								url_verification: {
+									summary: "URL verification challenge",
+									value: {
+										type: "url_verification",
+										challenge: "3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P",
+									},
+								},
+								message: {
+									summary: "DM tip from user",
+									value: {
+										type: "event_callback",
+										event: {
+											type: "message",
+											channel: "D0123456789",
+											user: "U0123456789",
+											text: "Heard the new office coffee machine is arriving next week!",
+											ts: "1706180699.000100",
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				responses: {
+					"200": {
+						content: {
+							"application/json": {
+								examples: {
+									challenge: {
+										summary: "URL verification response",
+										value: { challenge: "3eZbrw1aBm2rZgRNFdxV2595E9CY3gmdALWMmHkvFXO7tYXAYM8P" },
+									},
+									ok: {
+										summary: "Event processed",
+										value: { ok: true },
+									},
+								},
+							},
+						},
+					},
+					"401": {
+						content: {
+							"application/json": {
+								example: { error: "Invalid signature: Signature mismatch" },
+							},
+						},
+					},
+					"429": {
+						content: {
+							"application/json": {
+								example: { statusCode: 429, error: "Too Many Requests", message: "Du har nått gränsen (5 tips/timme). Försök igen senare!" },
+							},
+						},
+					},
+				},
+			},
 		},
 		handler: async (request, reply) => {
 			const { body, rawBody } = request;
