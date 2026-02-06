@@ -304,8 +304,12 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions, cod
 				console.log(`    📂 Found ${output.length} channels`);
 			}
 			if (result.toolName === "getChannelHistory" && Array.isArray(output)) {
-				state.slackData.messages.push(...output);
-				console.log(`    💬 Fetched ${output.length} messages`);
+				const toolCall = step.toolCalls?.find((tc) => tc.toolCallId === result.toolCallId);
+				const channelId = (toolCall?.args as { channelId?: string })?.channelId;
+				for (const m of output as SlackData["messages"]) {
+					state.slackData.messages.push({ ...m, channel: m.channel ?? channelId });
+				}
+				console.log(`    💬 Fetched ${output.length} messages from ${channelId ?? "unknown"}`);
 			}
 			if (result.toolName === "getUserInfo" && output) {
 				const user = output as { id: string; name: string };
@@ -333,14 +337,39 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions, cod
 
 	console.log(`  ✅ Total: ${state.slackData.messages.length} messages gathered`);
 
+	// Ensure required channels are always fetched (don't rely on LLM to call them)
+	if (state.slackData.channels.length === 0) {
+		console.log("  📦 Fetching channel list directly...");
+		state.slackData.channels = await deps.slack.listChannels();
+	}
+	const channelsByName = new Map(state.slackData.channels.map((c) => [c.name, c.id]));
+	const fetchedChannelIds = new Set(state.slackData.messages.map((m) => m.channel));
+	for (const col of RECURRING_COLUMNS) {
+		if (!col.slackChannel) continue;
+		const channelId = channelsByName.get(col.slackChannel);
+		if (!channelId) {
+			console.log(`  ⚠️ Required channel #${col.slackChannel} not found in workspace`);
+			continue;
+		}
+		if (fetchedChannelIds.has(channelId) || fetchedChannelIds.has(col.slackChannel)) {
+			console.log(`  ✅ Required channel #${col.slackChannel} already fetched`);
+			continue;
+		}
+		console.log(`  📦 Fetching required channel #${col.slackChannel} (${channelId})...`);
+		const rawMessages = await deps.slack.getChannelHistory(channelId, 50, oneWeekAgo);
+		const messages = rawMessages.map((m) => ({ ...m, channel: channelId }));
+		console.log(`  💬 Got ${messages.length} messages from #${col.slackChannel}`);
+		state.slackData.messages.push(...messages);
+	}
+
 	// If no messages from LLM tool calls, fetch directly (e.g., mock LLM)
 	if (state.slackData.messages.length === 0) {
 		console.log("  📦 Fetching data directly from Slack service...");
 		const channels = await deps.slack.listChannels();
 		state.slackData.channels = channels;
 		for (const channel of channels) {
-			const messages = await deps.slack.getChannelHistory(channel.id);
-			state.slackData.messages.push(...messages);
+			const rawMsgs = await deps.slack.getChannelHistory(channel.id);
+			state.slackData.messages.push(...rawMsgs.map((m) => ({ ...m, channel: channel.id })));
 		}
 	}
 
