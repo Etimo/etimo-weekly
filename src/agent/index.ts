@@ -440,7 +440,7 @@ Look for: celebrations, kudos, funny moments, wins, interesting discussions, cod
 	}
 
 	// Load anonymous tips submitted by users
-	state.anonymousTips = await deps.tips.consumeTips();
+	state.anonymousTips = await deps.tips.consumeTips(state.editionNumber);
 	if (state.anonymousTips.length > 0) {
 		console.log(`  📬 Loaded ${state.anonymousTips.length} anonymous tips for the gossip column`);
 	}

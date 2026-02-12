@@ -57,12 +57,19 @@ export class FileTipsRepository implements ITipsRepository {
 		console.log("  🗑️ Cleared all tips");
 	}
 
-	async consumeTips(): Promise<Tip[]> {
+	async consumeTips(editionNumber: number): Promise<Tip[]> {
 		const tips = this.readTipsFile();
-		if (tips.length > 0) {
-			this.writeTipsFile([]);
-			console.log(`  📬 Consumed ${tips.length} tips`);
+		const unconsumed = tips.filter((t) => !t.consumed);
+		if (unconsumed.length > 0) {
+			const now = new Date().toISOString();
+			for (const tip of unconsumed) {
+				tip.consumed = true;
+				tip.consumedByEdition = editionNumber;
+				tip.consumedAt = now;
+			}
+			this.writeTipsFile(tips);
+			console.log(`  📬 Consumed ${unconsumed.length} tips for edition #${editionNumber}`);
 		}
-		return tips;
+		return unconsumed;
 	}
 }

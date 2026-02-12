@@ -9,6 +9,9 @@ const TipSchema = z.object({
 	id: z.string(),
 	text: z.string(),
 	receivedAt: z.string(),
+	consumed: z.boolean().optional(),
+	consumedByEdition: z.number().optional(),
+	consumedAt: z.string().optional(),
 });
 
 const SubmitTipBodySchema = z.object({

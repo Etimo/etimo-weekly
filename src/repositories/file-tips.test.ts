@@ -82,19 +82,37 @@ describe("FileTipsRepository", () => {
 	});
 
 	describe("consumeTips", () => {
-		it("should return tips and clear them", async () => {
+		it("should return unconsumed tips and mark them as consumed", async () => {
 			await service.saveTip("Consumable tip");
 
-			const consumed = await service.consumeTips();
-			const remaining = await service.getTips();
+			const consumed = await service.consumeTips(1);
+			const allTips = await service.getTips();
 
 			expect(consumed).toHaveLength(1);
 			expect(consumed[0].text).toBe("Consumable tip");
-			expect(remaining).toEqual([]);
+			expect(allTips).toHaveLength(1);
+			expect(allTips[0].consumed).toBe(true);
+			expect(allTips[0].consumedByEdition).toBe(1);
+			expect(allTips[0].consumedAt).toBeDefined();
+		});
+
+		it("should not return already consumed tips", async () => {
+			await service.saveTip("First tip");
+			await service.consumeTips(1);
+
+			await service.saveTip("Second tip");
+			const consumed = await service.consumeTips(2);
+
+			expect(consumed).toHaveLength(1);
+			expect(consumed[0].text).toBe("Second tip");
+			expect(consumed[0].consumedByEdition).toBe(2);
+
+			const allTips = await service.getTips();
+			expect(allTips).toHaveLength(2);
 		});
 
 		it("should return empty array when no tips exist", async () => {
-			const consumed = await service.consumeTips();
+			const consumed = await service.consumeTips(1);
 
 			expect(consumed).toEqual([]);
 		});
