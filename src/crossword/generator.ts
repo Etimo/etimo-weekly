@@ -10,7 +10,7 @@ type PlacementCandidate = {
 	clue: string;
 	row: number;
 	col: number;
-	direction: "down" | "across";
+	direction: "across" | "down";
 	intersections: number;
 };
 
